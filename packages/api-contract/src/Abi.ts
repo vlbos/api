@@ -111,6 +111,7 @@ export class Abi {
         assert(isObject(arg.type), 'Invalid type definition found');
 
         return {
+          displayName: arg.type.displayName.join('::'),
           name: stringCamelCase(arg.name),
           type: this.registry.getMetaTypeDef(arg.type)
         };

@@ -19,6 +19,7 @@ export interface ContractBase<ApiType extends ApiTypes> {
 }
 
 export interface AbiParam {
+  displayName?: string;
   name: string;
   type: TypeDef;
 }

@@ -1,4 +1,4 @@
-// Copyright 2017-2020 @polkadot/types authors & contributors
+// Copyright 2017-2021 @polkadot/types authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 // augment the registry
@@ -8,9 +8,10 @@ export * from '../create/types';
 export * from './calls';
 export * from './codec';
 export * from './definitions';
+export * from './events';
 export * from './extrinsic';
-export * from './helpers';
 export * from './interfaces';
 export * from './registry';
 
-export type { Observable } from 'rxjs';
+// used inside augmented definitions
+export type { Observable } from '@polkadot/x-rxjs';

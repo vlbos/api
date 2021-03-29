@@ -1,13 +1,14 @@
-// Copyright 2017-2020 @polkadot/api-derive authors & contributors
+// Copyright 2017-2021 @polkadot/api-derive authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import type { Observable } from 'rxjs';
-import { ApiInterfaceRx } from '@polkadot/api/types';
+import type { ApiInterfaceRx } from '@polkadot/api/types';
+import type { Observable } from '@polkadot/x-rxjs';
+import type { HeaderExtended } from '../type/types';
 
-import { combineLatest, of } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { combineLatest, of } from '@polkadot/x-rxjs';
+import { catchError, map } from '@polkadot/x-rxjs/operators';
 
-import { HeaderExtended } from '../type';
+import { createHeaderExtended } from '../type';
 import { memo } from '../util';
 
 /**
@@ -33,7 +34,7 @@ export function getHeader (instanceId: string, api: ApiInterfaceRx): (hash: Uint
         : of([])
     ]).pipe(
       map(([header, validators]): HeaderExtended =>
-        new HeaderExtended(api.registry, header, validators)
+        createHeaderExtended(header.registry, header, validators)
       ),
       catchError((): Observable<undefined> =>
         // where rpc.chain.getHeader throws, we will land here - it can happen that

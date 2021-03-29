@@ -1,24 +1,19 @@
-// Copyright 2017-2020 @polkadot/api-derive authors & contributors
+// Copyright 2017-2021 @polkadot/api-derive authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import type { Observable } from 'rxjs';
 import type { ApiInterfaceRx } from '@polkadot/api/types';
 import type { Option, u32 } from '@polkadot/types';
 import type { ActiveEraInfo, EraIndex, Moment, SessionIndex } from '@polkadot/types/interfaces';
+import type { Observable } from '@polkadot/x-rxjs';
 import type { DeriveSessionIndexes } from '../types';
 
-import { of } from 'rxjs';
-import { map } from 'rxjs/operators';
-import { isFunction } from '@polkadot/util';
+import { of } from '@polkadot/x-rxjs';
+import { map } from '@polkadot/x-rxjs/operators';
 
 import { memo } from '../util';
 
-function isEraOpt (era: Option<EraIndex> | EraIndex): era is Option<EraIndex> {
-  return isFunction((era as Option<EraIndex>).unwrapOrDefault);
-}
-
 // parse into Indexes
-function parse ([activeEra, activeEraStart, currentEra, currentIndex, validatorCount]: [EraIndex, Option<Moment>, EraIndex, SessionIndex, u32]): DeriveSessionIndexes {
+function parse ([currentIndex, activeEra, activeEraStart, currentEra, validatorCount]: [SessionIndex, EraIndex, Option<Moment>, EraIndex, u32]): DeriveSessionIndexes {
   return {
     activeEra,
     activeEraStart,
@@ -28,23 +23,22 @@ function parse ([activeEra, activeEraStart, currentEra, currentIndex, validatorC
   };
 }
 
-// query for previous V2
-function queryNoActive (api: ApiInterfaceRx): Observable<DeriveSessionIndexes> {
-  return api.queryMulti<[Option<EraIndex> | EraIndex, SessionIndex, u32]>([
-    api.query.staking.currentEra,
+// query based on latest
+function queryStaking (api: ApiInterfaceRx): Observable<DeriveSessionIndexes> {
+  return api.queryMulti<[SessionIndex, Option<ActiveEraInfo>, Option<EraIndex>, u32]>([
     api.query.session.currentIndex,
+    api.query.staking.activeEra,
+    api.query.staking.currentEra,
     api.query.staking.validatorCount
   ]).pipe(
-    map(([currentEraOpt, currentIndex, validatorCount]): DeriveSessionIndexes => {
-      const currentEra = isEraOpt(currentEraOpt)
-        ? currentEraOpt.unwrapOrDefault()
-        : currentEraOpt;
+    map(([currentIndex, activeOpt, currentEra, validatorCount]): DeriveSessionIndexes => {
+      const { index, start } = activeOpt.unwrapOrDefault();
 
       return parse([
-        currentEra,
-        api.registry.createType('Option<Moment>'),
-        currentEra,
         currentIndex,
+        index,
+        start,
+        currentEra.unwrapOrDefault(),
         validatorCount
       ]);
     })
@@ -52,44 +46,35 @@ function queryNoActive (api: ApiInterfaceRx): Observable<DeriveSessionIndexes> {
 }
 
 // query based on latest
-function query (api: ApiInterfaceRx): Observable<DeriveSessionIndexes> {
-  return api.queryMulti<[Option<ActiveEraInfo>, Option<EraIndex>, SessionIndex, u32]>([
-    api.query.staking.activeEra,
-    api.query.staking.currentEra,
-    api.query.session.currentIndex,
-    api.query.staking.validatorCount
-  ]).pipe(
-    map(([activeOpt, currentEra, currentIndex, validatorCount]): DeriveSessionIndexes => {
-      const { index, start } = activeOpt.unwrapOrDefault();
-
-      return parse([
-        index,
-        start,
-        currentEra.unwrapOrDefault(),
-        currentIndex,
-        validatorCount
-      ]);
-    })
+function querySession (api: ApiInterfaceRx): Observable<DeriveSessionIndexes> {
+  return api.query.session.currentIndex().pipe(
+    map((currentIndex): DeriveSessionIndexes => parse([
+      currentIndex,
+      api.registry.createType('EraIndex'),
+      api.registry.createType('Option<Moment>'),
+      api.registry.createType('EraIndex'),
+      api.registry.createType('u32')
+    ]))
   );
 }
 
 // empty set when none is available
 function empty (api: ApiInterfaceRx): Observable<DeriveSessionIndexes> {
   return of(parse([
+    api.registry.createType('SessionIndex', 1),
     api.registry.createType('EraIndex'),
     api.registry.createType('Option<Moment>'),
     api.registry.createType('EraIndex'),
-    api.registry.createType('SessionIndex', 1),
     api.registry.createType('u32')
   ]));
 }
 
 export function indexes (instanceId: string, api: ApiInterfaceRx): () => Observable<DeriveSessionIndexes> {
   return memo(instanceId, (): Observable<DeriveSessionIndexes> =>
-    api.query.session && api.query.staking
-      ? isFunction(api.query.staking.activeEra)
-        ? query(api)
-        : queryNoActive(api)
+    api.query.session
+      ? api.query.staking
+        ? queryStaking(api)
+        : querySession(api)
       : empty(api)
   );
 }

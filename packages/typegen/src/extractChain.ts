@@ -1,4 +1,4 @@
-// Copyright 2017-2020 @polkadot/typegen authors & contributors
+// Copyright 2017-2021 @polkadot/typegen authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 // Connects to the local chain and outputs a re-usable calls-only chain definition in  the form
@@ -6,7 +6,8 @@
 
 import process from 'process';
 import yargs from 'yargs';
-import { ApiPromise, WsProvider } from '@polkadot/api/index';
+
+import { ApiPromise, WsProvider } from '@polkadot/api';
 
 /** @internal */
 async function run (ws: string): Promise<void> {

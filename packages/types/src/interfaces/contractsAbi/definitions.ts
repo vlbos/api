@@ -1,4 +1,4 @@
-// Copyright 2017-2020 @polkadot/types authors & contributors
+// Copyright 2017-2021 @polkadot/types authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import type { Definitions } from '../../types';
@@ -126,7 +126,10 @@ export default {
       license: 'Option<Text>'
     },
     ContractProjectSource: {
-      hash: '[u8; 32]',
+      _alias: {
+        wasmHash: 'hash'
+      },
+      wasmHash: '[u8; 32]',
       language: 'Text',
       compiler: 'Text',
       wasm: 'Raw'

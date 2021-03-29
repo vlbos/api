@@ -1,22 +1,20 @@
-// Copyright 2017-2020 @polkadot/api-derive authors & contributors
+// Copyright 2017-2021 @polkadot/api-derive authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import type BN from 'bn.js';
-import type { AccountId, Balance, BalanceLock, BalanceLockTo212, BalanceOf, Bid, BidKind, BlockNumber, Hash, Index, Proposal, ProposalIndex, SetIndex, SocietyVote, StrikeCount, TreasuryProposal, Votes, VouchingStatus } from '@polkadot/types/interfaces';
 import type { u32 } from '@polkadot/types';
+import type { AccountId, Balance, BalanceLock, BalanceLockTo212, BalanceOf, Bid, BidKind, BlockNumber, Bounty, BountyIndex, Hash, Index, Proposal, ProposalIndex, SetIndex, SocietyVote, StrikeCount, TreasuryProposal, Votes, VouchingStatus } from '@polkadot/types/interfaces';
 
 export * from './accounts/types';
-export * from './chain/types';
 export * from './council/types';
 export * from './democracy/types';
 export * from './elections/types';
 export * from './parachains/types';
 export * from './session/types';
 export * from './staking/types';
+export * from './type/types';
 
-export interface DeriveBalancesAccount {
-  accountId: AccountId;
-  accountNonce: Index;
+export interface DeriveBalancesAccountData {
   freeBalance: Balance;
   frozenFee: Balance;
   frozenMisc: Balance;
@@ -24,16 +22,25 @@ export interface DeriveBalancesAccount {
   votingBalance: Balance;
 }
 
-export interface DeriveBalancesAll extends DeriveBalancesAccount {
-  isVesting: boolean;
+export interface DeriveBalancesAccount extends DeriveBalancesAccountData {
+  accountId: AccountId;
+  accountNonce: Index;
+  additional: DeriveBalancesAccountData[];
+}
+
+export interface DeriveBalancesAllAccountData extends DeriveBalancesAccountData {
+  availableBalance: Balance;
   lockedBalance: Balance;
   lockedBreakdown: (BalanceLock | BalanceLockTo212)[];
-  availableBalance: Balance;
-  votingBalance: Balance;
+  vestingLocked: Balance;
+}
+
+export interface DeriveBalancesAll extends DeriveBalancesAccount, DeriveBalancesAllAccountData {
+  additional: DeriveBalancesAllAccountData[];
+  isVesting: boolean;
   vestedBalance: Balance;
   vestedClaimable: Balance;
   vestingEndBlock: BlockNumber;
-  vestingLocked: Balance;
   vestingPerBlock: Balance;
   vestingTotal: Balance;
 }
@@ -101,6 +108,7 @@ export interface DeriveSocietyCandidate {
 
 export interface DeriveSocietyMember {
   accountId: AccountId;
+  isDefenderVoter: boolean;
   isSuspended: boolean;
   payouts: [BlockNumber, Balance][];
   strikes: StrikeCount;
@@ -127,3 +135,12 @@ export interface VoterPosition {
 }
 
 export type DeriveVoterPositions = Record<string, VoterPosition>;
+
+export interface DeriveBounty {
+  bounty: Bounty;
+  description: string;
+  index: BountyIndex;
+  proposals: DeriveCollectiveProposal[];
+}
+
+export type DeriveBounties = DeriveBounty[];

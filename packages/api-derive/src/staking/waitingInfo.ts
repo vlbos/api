@@ -1,17 +1,19 @@
-// Copyright 2017-2020 @polkadot/api-derive authors & contributors
+// Copyright 2017-2021 @polkadot/api-derive authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import type { Observable } from 'rxjs';
 import type { ApiInterfaceRx } from '@polkadot/api/types';
-import type { DeriveStakingWaiting } from '../types';
+import type { Observable } from '@polkadot/x-rxjs';
+import type { DeriveStakingWaiting, StakingQueryFlags } from '../types';
 
-import { combineLatest } from 'rxjs';
-import { map, switchMap } from 'rxjs/operators';
+import { combineLatest } from '@polkadot/x-rxjs';
+import { map, switchMap } from '@polkadot/x-rxjs/operators';
 
 import { memo } from '../util';
 
-export function waitingInfo (instanceId: string, api: ApiInterfaceRx): () => Observable<DeriveStakingWaiting> {
-  return memo(instanceId, (): Observable<DeriveStakingWaiting> =>
+const DEFAULT_FLAGS = { withController: true, withPrefs: true };
+
+export function waitingInfo (instanceId: string, api: ApiInterfaceRx): (flags?: StakingQueryFlags) => Observable<DeriveStakingWaiting> {
+  return memo(instanceId, (flags: StakingQueryFlags = DEFAULT_FLAGS): Observable<DeriveStakingWaiting> =>
     combineLatest([
       api.derive.staking.validators(),
       api.derive.staking.stashes()
@@ -20,7 +22,7 @@ export function waitingInfo (instanceId: string, api: ApiInterfaceRx): () => Obs
         const elected = nextElected.map((a) => a.toString());
         const waiting = stashes.filter((v) => !elected.includes(v.toString()));
 
-        return api.derive.staking.queryMulti(waiting).pipe(
+        return api.derive.staking.queryMulti(waiting, flags).pipe(
           map((info): DeriveStakingWaiting => ({
             info,
             waiting

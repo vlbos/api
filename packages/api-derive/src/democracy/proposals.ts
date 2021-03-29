@@ -1,16 +1,16 @@
-// Copyright 2017-2020 @polkadot/api-derive authors & contributors
+// Copyright 2017-2021 @polkadot/api-derive authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import type { Observable } from 'rxjs';
 import type { ApiInterfaceRx } from '@polkadot/api/types';
 import type { Option, Vec } from '@polkadot/types';
 import type { AccountId, Balance, Hash, PropIndex } from '@polkadot/types/interfaces';
 import type { ITuple } from '@polkadot/types/types';
-import type { DeriveProposalImage, DeriveProposal } from '../types';
+import type { Observable } from '@polkadot/x-rxjs';
+import type { DeriveProposal, DeriveProposalImage } from '../types';
 
-import { combineLatest, of } from 'rxjs';
-import { map, switchMap } from 'rxjs/operators';
 import { isFunction } from '@polkadot/util';
+import { combineLatest, of } from '@polkadot/x-rxjs';
+import { map, switchMap } from '@polkadot/x-rxjs/operators';
 
 import { memo } from '../util';
 
@@ -51,7 +51,7 @@ function parse ([proposals, images, optDepositors]: Result): DeriveProposal[] {
 
 export function proposals (instanceId: string, api: ApiInterfaceRx): () => Observable<DeriveProposal[]> {
   return memo(instanceId, (): Observable<DeriveProposal[]> =>
-    api.query.democracy?.publicProps && api.query.democracy?.preimages
+    isFunction(api.query.democracy?.publicProps) && isFunction(api.query.democracy?.preimages)
       ? api.query.democracy.publicProps<Proposals>().pipe(
         switchMap((proposals) =>
           combineLatest([

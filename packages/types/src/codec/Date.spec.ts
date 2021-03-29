@@ -1,4 +1,4 @@
-// Copyright 2017-2020 @polkadot/types authors & contributors
+// Copyright 2017-2021 @polkadot/types authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import type { CodecTo } from '../types';
@@ -58,6 +58,12 @@ describe('Date', (): void => {
       expect(
         new CodecDate(registry, 3).toHex(true)
       ).toEqual('0x0300000000000000');
+    });
+
+    it('encodes correctly to BigInt', (): void => {
+      expect(
+        new CodecDate(registry, 41).toBigInt() + 1n
+      ).toEqual(42n);
     });
   });
 

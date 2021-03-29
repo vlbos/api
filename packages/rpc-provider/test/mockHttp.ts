@@ -1,13 +1,13 @@
-// Copyright 2017-2020 @polkadot/rpc-provider authors & contributors
+// Copyright 2017-2021 @polkadot/rpc-provider authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 /* eslint-disable */
 
 import nock from 'nock';
 
-const TEST_HTTP_URL = 'http://localhost:9944';
+export const TEST_HTTP_URL = 'http://localhost:9944';
 
-function mockHttp (requests: any[]): any {
+export function mockHttp (requests: any[]): any {
   nock.cleanAll();
 
   return requests.reduce((scope, request: any): nock.Scope => {
@@ -21,8 +21,3 @@ function mockHttp (requests: any[]): any {
       });
   }, nock(TEST_HTTP_URL));
 }
-
-export {
-  TEST_HTTP_URL,
-  mockHttp
-};

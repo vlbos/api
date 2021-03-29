@@ -1,4 +1,4 @@
-// Copyright 2017-2020 @polkadot/api-derive authors & contributors
+// Copyright 2017-2021 @polkadot/api-derive authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import type BN from 'bn.js';
@@ -143,4 +143,13 @@ export interface DeriveStakingAccount extends DeriveStakingQuery, DeriveStakingK
 export interface DeriveStakingOverview extends DeriveSessionIndexes {
   nextElected: AccountId[];
   validators: AccountId[];
+}
+
+export interface StakingQueryFlags {
+  withController?: boolean;
+  withDestination?: boolean;
+  withExposure?: boolean;
+  withLedger?: boolean;
+  withNominations?: boolean;
+  withPrefs?: boolean;
 }

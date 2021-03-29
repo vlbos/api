@@ -1,11 +1,32 @@
-// Copyright 2017-2020 @polkadot/types authors & contributors
+// Copyright 2017-2021 @polkadot/types authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { H256 } from '../interfaces/runtime';
-import { AnyJson, BareOpts } from './helpers';
-import { Registry } from './registry';
+import type BN from 'bn.js';
+import type { Hash } from '../interfaces/runtime';
+import type { Registry } from './registry';
 
-import BN from 'bn.js';
+export type AnyJson = string | number | boolean | null | undefined | AnyJson[] | { [index: string]: AnyJson };
+
+export type AnyFunction = (...args: any[]) => any;
+
+export type AnyNumber = BN | BigInt | Uint8Array | number | string;
+
+export type AnyString = string | string;
+
+export type AnyTuple = Codec[];
+
+export type AnyU8a = Uint8Array | number[] | string;
+
+// helper to extract keys from an array
+export type ArrayElementType<T extends ReadonlyArray<unknown>> = T extends ReadonlyArray<infer ElementType>
+  ? ElementType
+  : never;
+
+export type BareOpts = boolean | Record<string, boolean>;
+
+export type Callback<T, E = undefined> = E extends Codec
+  ? (result: T, extra: E) => void | Promise<void>
+  : (result: T) => void | Promise<void>;
 
 export type CodecTo = 'toHex' | 'toJSON' | 'toString' | 'toU8a';
 
@@ -25,7 +46,7 @@ export interface Codec {
   /**
    * @description Returns a hash of the value
    */
-  readonly hash: H256;
+  readonly hash: Hash;
 
   /**
    * @description Checks if the value is an empty value
@@ -36,6 +57,11 @@ export interface Codec {
    * @description The registry associated with this object
    */
   readonly registry: Registry;
+
+  /**
+   * @description The block at which this value was retrieved/created (set to non-empty when retrieved from storage)
+   */
+  createdAtHash?: Hash;
 
   /**
    * @description Compares the value of the input to see if there is a match

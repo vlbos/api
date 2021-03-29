@@ -1,11 +1,12 @@
-// Copyright 2017-2020 @polkadot/types authors & contributors
+// Copyright 2017-2021 @polkadot/types authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import type { H256 } from '../interfaces/runtime';
+import type { CodecHash, Hash } from '../interfaces/runtime';
 import type { Codec, Constructor, Registry } from '../types';
 
 import BN from 'bn.js';
-import { assert, bnToBn, bnToU8a, isBn, isU8a, isNumber, isString, isUndefined, stringCamelCase, stringUpperFirst, u8aToHex, u8aToBn, u8aToU8a } from '@polkadot/util';
+
+import { assert, bnToBn, bnToU8a, isBn, isNumber, isString, isU8a, isUndefined, stringCamelCase, stringUpperFirst, u8aToBn, u8aToHex, u8aToU8a } from '@polkadot/util';
 
 import { compareArray } from './utils';
 
@@ -79,6 +80,8 @@ function decodeSet (setValues: SetValues, value: string[] | Set<string> | Uint8A
 export class CodecSet extends Set<string> implements Codec {
   public readonly registry: Registry;
 
+  public createdAtHash?: Hash;
+
   readonly #allowed: SetValues;
 
   readonly #byteLength: number;
@@ -120,7 +123,7 @@ export class CodecSet extends Set<string> implements Codec {
   /**
    * @description returns a hash of the contents
    */
-  public get hash (): H256 {
+  public get hash (): CodecHash {
     return this.registry.hash(this.toU8a());
   }
 

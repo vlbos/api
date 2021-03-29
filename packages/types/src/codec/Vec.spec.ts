@@ -1,4 +1,4 @@
-// Copyright 2017-2020 @polkadot/types authors & contributors
+// Copyright 2017-2021 @polkadot/types authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import type { PropIndex } from '../interfaces/democracy';
@@ -6,6 +6,7 @@ import type { Codec, CodecTo } from '../types';
 
 import { Metadata } from '@polkadot/metadata';
 import rpcMetadata from '@polkadot/metadata/static';
+import { randomAsU8a } from '@polkadot/util-crypto';
 
 import { createTypeUnsafe, TypeRegistry } from '../create';
 import { GenericAccountId as AccountId } from '../generic';
@@ -169,6 +170,15 @@ describe('Vec', (): void => {
       ]);
 
       expect(vec.indexOf(myId)).toEqual(2);
+    });
+
+    it('allows a slice operator', (): void => {
+      const vec = registry.createType('Vec<AccountId>', [
+        randomAsU8a(), randomAsU8a(), randomAsU8a(), randomAsU8a(), randomAsU8a(), randomAsU8a(), randomAsU8a(), randomAsU8a(), randomAsU8a(), randomAsU8a()
+      ]);
+
+      expect(vec).toHaveLength(10);
+      expect(vec.slice(2, 7)).toHaveLength(5);
     });
   });
 });

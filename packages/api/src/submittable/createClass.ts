@@ -1,20 +1,20 @@
-// Copyright 2017-2020 @polkadot/api authors & contributors
+// Copyright 2017-2021 @polkadot/api authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 /* eslint-disable no-dupe-class-members */
 
-import type { Observable } from 'rxjs';
 import type { Address, ApplyExtrinsicResult, Call, Extrinsic, ExtrinsicEra, ExtrinsicStatus, Hash, Header, Index, RuntimeDispatchInfo } from '@polkadot/types/interfaces';
-import type { Callback, Codec, Constructor, IKeyringPair, Registry, SignatureOptions, ISubmittableResult } from '@polkadot/types/types';
+import type { Callback, Codec, Constructor, IKeyringPair, ISubmittableResult, Registry, SignatureOptions } from '@polkadot/types/types';
+import type { Observable } from '@polkadot/x-rxjs';
 import type { ApiInterfaceRx, ApiTypes, SignerResult } from '../types';
-import type { AddressOrPair, SignerOptions, SubmittableExtrinsic, SubmittableDryRunResult, SubmittablePaymentResult, SubmittableResultResult, SubmittableResultSubscription, SubmittableThis } from './types';
+import type { AddressOrPair, SignerOptions, SubmittableDryRunResult, SubmittableExtrinsic, SubmittablePaymentResult, SubmittableResultResult, SubmittableResultSubscription, SubmittableThis } from './types';
 
-import { of } from 'rxjs';
-import { first, map, mapTo, mergeMap, switchMap, tap } from 'rxjs/operators';
 import { assert, isBn, isFunction, isNumber, isString, isU8a } from '@polkadot/util';
+import { of } from '@polkadot/x-rxjs';
+import { first, map, mapTo, mergeMap, switchMap, tap } from '@polkadot/x-rxjs/operators';
 
-import { filterEvents, isKeyringPair } from '../util';
 import { ApiBase } from '../base';
+import { filterEvents, isKeyringPair } from '../util';
 import { SubmittableResult } from './Result';
 
 interface SubmittableOptions<ApiType extends ApiTypes> {
@@ -29,7 +29,7 @@ export function createClass <ApiType extends ApiTypes> ({ api, apiType, decorate
   // an instance of the base extrinsic for us to extend
   const ExtrinsicBase = api.registry.createClass('Extrinsic');
 
-  return class Submittable extends ExtrinsicBase implements SubmittableExtrinsic<ApiType> {
+  class Submittable extends ExtrinsicBase implements SubmittableExtrinsic<ApiType> {
     readonly #ignoreStatusCb: boolean;
 
     #transformResult: (input: ISubmittableResult) => ISubmittableResult = identity;
@@ -309,5 +309,7 @@ export function createClass <ApiType extends ApiTypes> ({ api, apiType, decorate
         api.signer.update(updateId, status);
       }
     }
-  };
+  }
+
+  return Submittable;
 }

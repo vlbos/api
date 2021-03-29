@@ -1,4 +1,4 @@
-// Copyright 2017-2020 @polkadot/api-derive authors & contributors
+// Copyright 2017-2021 @polkadot/api-derive authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import type { ApiInterfaceRx } from '@polkadot/api/types';
@@ -8,6 +8,7 @@ import type { ITuple } from '@polkadot/types/types';
 import type { DeriveProposalImage, DeriveReferendum, DeriveReferendumVote, DeriveReferendumVotes, DeriveReferendumVoteState } from '../types';
 
 import BN from 'bn.js';
+
 import { bnSqrt } from '@polkadot/util';
 
 type PreimageInfo = [Bytes, AccountId, Balance, BlockNumber];

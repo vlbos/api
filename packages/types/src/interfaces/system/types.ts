@@ -1,32 +1,67 @@
 // Auto-generated via `yarn polkadot-types-from-defs`, do not edit
 /* eslint-disable */
 
-import type { Bytes, Compact, Enum, GenericEvent, HashMap, Option, Result, Struct, Text, U8aFixed, Vec, bool, i32, u32, u64, u8 } from '@polkadot/types';
+import type { Bytes, Compact, Enum, GenericChainProperties, GenericEvent, HashMap, Option, Result, Struct, Text, U8aFixed, Vec, bool, i32, u32, u64, u8 } from '@polkadot/types';
 import type { ITuple } from '@polkadot/types/types';
 import type { AccountData } from '@polkadot/types/interfaces/balances';
 import type { AccountId, BlockNumber, Digest, Hash, Index, Pays, Weight } from '@polkadot/types/interfaces/runtime';
 
 /** @name AccountInfo */
-export interface AccountInfo extends Struct {
+export interface AccountInfo extends AccountInfoWithTripleRefCount {}
+
+/** @name AccountInfoWithDualRefCount */
+export interface AccountInfoWithDualRefCount extends Struct {
+  readonly nonce: Index;
+  readonly consumers: RefCount;
+  readonly providers: RefCount;
+  readonly data: AccountData;
+}
+
+/** @name AccountInfoWithProviders */
+export interface AccountInfoWithProviders extends AccountInfoWithDualRefCount {}
+
+/** @name AccountInfoWithRefCount */
+export interface AccountInfoWithRefCount extends Struct {
   readonly nonce: Index;
   readonly refcount: RefCount;
   readonly data: AccountData;
 }
 
+/** @name AccountInfoWithTripleRefCount */
+export interface AccountInfoWithTripleRefCount extends Struct {
+  readonly nonce: Index;
+  readonly consumers: RefCount;
+  readonly providers: RefCount;
+  readonly sufficients: RefCount;
+  readonly data: AccountData;
+}
+
 /** @name ApplyExtrinsicResult */
 export interface ApplyExtrinsicResult extends Result<DispatchOutcome, TransactionValidityError> {
+  readonly isErr: boolean;
+  readonly asErr: TransactionValidityError;
+  /** @deprecated Use isErr */
   readonly isError: boolean;
+  /** @deprecated Use asErr */
   readonly asError: TransactionValidityError;
   readonly isOk: boolean;
   readonly asOk: DispatchOutcome;
 }
 
-/** @name ChainProperties */
-export interface ChainProperties extends Struct {
-  readonly ss58Format: Option<u8>;
-  readonly tokenDecimals: Option<u32>;
-  readonly tokenSymbol: Option<Text>;
+/** @name BlockLength */
+export interface BlockLength extends Struct {
+  readonly max: PerDispatchClassU32;
 }
+
+/** @name BlockWeights */
+export interface BlockWeights extends Struct {
+  readonly baseBlock: Weight;
+  readonly maxBlock: Weight;
+  readonly perClass: PerDispatchClassWeightsPerClass;
+}
+
+/** @name ChainProperties */
+export interface ChainProperties extends GenericChainProperties {}
 
 /** @name ChainType */
 export interface ChainType extends Enum {
@@ -36,6 +71,9 @@ export interface ChainType extends Enum {
   readonly isCustom: boolean;
   readonly asCustom: Text;
 }
+
+/** @name ConsumedWeight */
+export interface ConsumedWeight extends PerDispatchClassWeight {}
 
 /** @name DigestOf */
 export interface DigestOf extends Digest {}
@@ -90,7 +128,11 @@ export interface DispatchInfoTo244 extends Struct {
 
 /** @name DispatchOutcome */
 export interface DispatchOutcome extends Result<ITuple<[]>, DispatchError> {
+  readonly isErr: boolean;
+  readonly asErr: DispatchError;
+  /** @deprecated Use isErr */
   readonly isError: boolean;
+  /** @deprecated Use asErr */
   readonly asError: DispatchError;
   readonly isOk: boolean;
   readonly asOk: ITuple<[]>;
@@ -98,7 +140,11 @@ export interface DispatchOutcome extends Result<ITuple<[]>, DispatchError> {
 
 /** @name DispatchResult */
 export interface DispatchResult extends Result<ITuple<[]>, DispatchError> {
+  readonly isErr: boolean;
+  readonly asErr: DispatchError;
+  /** @deprecated Use isErr */
   readonly isError: boolean;
+  /** @deprecated Use asErr */
   readonly asError: DispatchError;
   readonly isOk: boolean;
   readonly asOk: ITuple<[]>;
@@ -109,7 +155,11 @@ export interface DispatchResultOf extends DispatchResult {}
 
 /** @name DispatchResultTo198 */
 export interface DispatchResultTo198 extends Result<ITuple<[]>, Text> {
+  readonly isErr: boolean;
+  readonly asErr: Text;
+  /** @deprecated Use isErr */
   readonly isError: boolean;
+  /** @deprecated Use asErr */
   readonly asError: Text;
   readonly isOk: boolean;
   readonly asOk: ITuple<[]>;
@@ -238,6 +288,27 @@ export interface PeerPing extends Struct {
   readonly secs: u64;
 }
 
+/** @name PerDispatchClassU32 */
+export interface PerDispatchClassU32 extends Struct {
+  readonly normal: u32;
+  readonly operational: u32;
+  readonly mandatory: u32;
+}
+
+/** @name PerDispatchClassWeight */
+export interface PerDispatchClassWeight extends Struct {
+  readonly normal: Weight;
+  readonly operational: Weight;
+  readonly mandatory: Weight;
+}
+
+/** @name PerDispatchClassWeightsPerClass */
+export interface PerDispatchClassWeightsPerClass extends Struct {
+  readonly normal: WeightPerClass;
+  readonly operational: WeightPerClass;
+  readonly mandatory: WeightPerClass;
+}
+
 /** @name Phase */
 export interface Phase extends Enum {
   readonly isApplyExtrinsic: boolean;
@@ -284,6 +355,14 @@ export interface UnknownTransaction extends Enum {
   readonly isNoUnsignedValidator: boolean;
   readonly isCustom: boolean;
   readonly asCustom: u8;
+}
+
+/** @name WeightPerClass */
+export interface WeightPerClass extends Struct {
+  readonly baseExtrinsic: Weight;
+  readonly maxExtrinsic: Weight;
+  readonly maxTotal: Option<Weight>;
+  readonly reserved: Option<Weight>;
 }
 
 export type PHANTOM_SYSTEM = 'system';

@@ -1,10 +1,10 @@
-// Copyright 2017-2020 @polkadot/types authors & contributors
+// Copyright 2017-2021 @polkadot/types authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import type { H256 } from '../interfaces/runtime';
+import type { CodecHash, Hash } from '../interfaces/runtime';
 import type { AnyU8a, Codec, Registry } from '../types';
 
-import { assert, hexToU8a, isHex, isString, stringToU8a, u8aToString, u8aToHex, compactFromU8a, compactAddLength } from '@polkadot/util';
+import { assert, compactAddLength, compactFromU8a, hexToU8a, isHex, isString, stringToU8a, u8aToHex, u8aToString } from '@polkadot/util';
 
 import { Raw } from '../codec/Raw';
 
@@ -50,6 +50,8 @@ function decodeText (value?: null | Text | string | AnyU8a | { toString: () => s
 export class Text extends String implements Codec {
   public readonly registry: Registry;
 
+  public createdAtHash?: Hash;
+
   #override: string | null = null;
 
   constructor (registry: Registry, value?: null | Text | string | AnyU8a | { toString: () => string }) {
@@ -68,7 +70,7 @@ export class Text extends String implements Codec {
   /**
    * @description returns a hash of the contents
    */
-  public get hash (): H256 {
+  public get hash (): CodecHash {
     return this.registry.hash(this.toU8a());
   }
 

@@ -1,7 +1,7 @@
-// Copyright 2017-2020 @polkadot/api authors & contributors
+// Copyright 2017-2021 @polkadot/api authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import type { DispatchError, DispatchInfo, ExtrinsicStatus, EventRecord } from '@polkadot/types/interfaces';
+import type { DispatchError, DispatchInfo, EventRecord, ExtrinsicStatus } from '@polkadot/types/interfaces';
 import type { AnyJson, ISubmittableResult } from '@polkadot/types/types';
 import type { SubmittableResultValue } from './types';
 
@@ -66,14 +66,14 @@ export class SubmittableResult implements ISubmittableResult {
   /**
    * @description Filters EventRecords for the specified method & section (there could be multiple)
    */
-  public filterRecords (section: string, method: string): EventRecord[] {
-    return filterAndApply(this.events, section, [method], recordIdentity);
+  public filterRecords (section: string, method: string | string[]): EventRecord[] {
+    return filterAndApply(this.events, section, Array.isArray(method) ? method : [method], recordIdentity);
   }
 
   /**
    * @description Finds an EventRecord for the specified method & section
    */
-  public findRecord (section: string, method: string): EventRecord | undefined {
+  public findRecord (section: string, method: string | string[]): EventRecord | undefined {
     return this.filterRecords(section, method)[0];
   }
 

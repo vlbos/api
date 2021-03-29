@@ -1,4 +1,4 @@
-// Copyright 2017-2020 @polkadot/types authors & contributors
+// Copyright 2017-2021 @polkadot/types authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import { TypeRegistry } from '../create';
@@ -28,8 +28,8 @@ describe('EthereumLookupSource', (): void => {
     );
     testDecode(
       'AccountIndex (mixed prefixes)',
-      registry.createType('EthereumLookupSource', '2jpAFn'),
-      // NOTE Expected address here is encoded with prefix 42, input above with 68
+      registry.createType('EthereumLookupSource', '118r'),
+      // NOTE Expected address here is encoded with prefix 42, input above with 1
       '25GUyv'
     );
     testDecode(
@@ -98,7 +98,7 @@ describe('EthereumLookupSource', (): void => {
 
     it('equals on AccountIndex', (): void => {
       // see the test below - these are equivalent (with different prefix encoding)
-      expect(registry.createType('EthereumLookupSource', '2jpAFn').eq('25GUyv')).toBe(true);
+      expect(registry.createType('EthereumLookupSource', '118r').eq('25GUyv')).toBe(true);
     });
   });
 });

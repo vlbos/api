@@ -1,17 +1,17 @@
-// Copyright 2017-2020 @polkadot/types authors & contributors
+// Copyright 2017-2021 @polkadot/types authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import type { FunctionMetadataLatest } from '../interfaces/metadata/types';
 import type { EcdsaSignature, Ed25519Signature, ExtrinsicUnknown, ExtrinsicV4, Sr25519Signature } from '../interfaces/extrinsics';
+import type { FunctionMetadataLatest } from '../interfaces/metadata/types';
 import type { Address, Balance, Call, Index } from '../interfaces/runtime';
-import type { AnyJson, AnyU8a, ArgsDef, Codec, ExtrinsicPayloadValue, IExtrinsic, IKeyringPair, InterfaceTypes, Registry, SignatureOptions } from '../types';
+import type { AnyJson, AnyTuple, AnyU8a, ArgsDef, CallBase, ExtrinsicPayloadValue, IExtrinsic, IKeyringPair, IMethod, InterfaceTypes, Registry, SignatureOptions } from '../types';
+import type { GenericExtrinsicEra } from './ExtrinsicEra';
+import type { ExtrinsicValueV4 } from './v4/Extrinsic';
 
 import { assert, compactAddLength, compactFromU8a, isHex, isU8a, u8aConcat, u8aToHex, u8aToU8a } from '@polkadot/util';
 
 import { Base } from '../codec/Base';
 import { Compact } from '../codec/Compact';
-import { ExtrinsicValueV4 } from './v4/Extrinsic';
-import { GenericExtrinsicEra } from './ExtrinsicEra';
 import { BIT_SIGNED, BIT_UNSIGNED, DEFAULT_VERSION, UNMASK_VERSION } from './constants';
 
 interface CreateOptions {
@@ -34,11 +34,11 @@ const VERSIONS: (keyof InterfaceTypes)[] = [
 
 export { EXTRINSIC_VERSION as LATEST_EXTRINSIC_VERSION } from './v4/Extrinsic';
 
-abstract class ExtrinsicBase extends Base<ExtrinsicVx | ExtrinsicUnknown> {
+abstract class ExtrinsicBase<A extends AnyTuple> extends Base<ExtrinsicVx | ExtrinsicUnknown> {
   /**
    * @description The arguments passed to for the call, exposes args so it is compatible with [[Call]]
    */
-  public get args (): Codec[] {
+  public get args (): A {
     return this.method.args;
   }
 
@@ -78,13 +78,6 @@ abstract class ExtrinsicBase extends Base<ExtrinsicVx | ExtrinsicUnknown> {
   }
 
   /**
-   * @description `true` is method has `Origin` argument (compatibility with [Call])
-   */
-  public get hasOrigin (): boolean {
-    return this.method.hasOrigin;
-  }
-
-  /**
    * @description `true` id the extrinsic is signed
    */
   public get isSigned (): boolean {
@@ -108,8 +101,8 @@ abstract class ExtrinsicBase extends Base<ExtrinsicVx | ExtrinsicUnknown> {
   /**
    * @description The [[Call]] this extrinsic wraps
    */
-  public get method (): Call {
-    return (this._raw as ExtrinsicVx).method;
+  public get method (): CallBase<A> {
+    return (this._raw as ExtrinsicVx).method as unknown as CallBase<A>;
   }
 
   /**
@@ -153,6 +146,13 @@ abstract class ExtrinsicBase extends Base<ExtrinsicVx | ExtrinsicUnknown> {
   public get version (): number {
     return this.type | (this.isSigned ? BIT_SIGNED : BIT_UNSIGNED);
   }
+
+  /**
+   * @description Checks if the source matches this in type
+   */
+  public is (other: IMethod<AnyTuple>): other is IMethod<A> {
+    return this.method.is(other);
+  }
 }
 
 /**
@@ -167,8 +167,8 @@ abstract class ExtrinsicBase extends Base<ExtrinsicVx | ExtrinsicUnknown> {
  * - signed, to create a transaction
  * - left as is, to create an inherent
  */
-export class GenericExtrinsic extends ExtrinsicBase implements IExtrinsic {
-  constructor (registry: Registry, value: GenericExtrinsic | ExtrinsicValue | AnyU8a | Call | undefined, { version }: CreateOptions = {}) {
+export class GenericExtrinsic<A extends AnyTuple = AnyTuple> extends ExtrinsicBase<A> implements IExtrinsic<A> {
+  constructor (registry: Registry, value?: GenericExtrinsic | ExtrinsicValue | AnyU8a | Call, { version }: CreateOptions = {}) {
     super(registry, GenericExtrinsic._decodeExtrinsic(registry, value, version));
   }
 
@@ -187,7 +187,7 @@ export class GenericExtrinsic extends ExtrinsicBase implements IExtrinsic {
   }
 
   /** @internal */
-  private static _decodeExtrinsic (registry: Registry, value: GenericExtrinsic | ExtrinsicValue | AnyU8a | Call | undefined, version: number = DEFAULT_VERSION): ExtrinsicVx | ExtrinsicUnknown {
+  private static _decodeExtrinsic (registry: Registry, value?: GenericExtrinsic | ExtrinsicValue | AnyU8a | Call, version: number = DEFAULT_VERSION): ExtrinsicVx | ExtrinsicUnknown {
     if (isU8a(value) || Array.isArray(value) || isHex(value)) {
       return GenericExtrinsic._decodeU8a(registry, u8aToU8a(value), version);
     } else if (value instanceof registry.createClass('Call')) {
@@ -216,7 +216,7 @@ export class GenericExtrinsic extends ExtrinsicBase implements IExtrinsic {
   /**
    * @description Injects an already-generated signature into the extrinsic
    */
-  public addSignature (signer: Address | Uint8Array | string, signature: Uint8Array | string, payload: ExtrinsicPayloadValue | Uint8Array | string): GenericExtrinsic {
+  public addSignature (signer: Address | Uint8Array | string, signature: Uint8Array | string, payload: ExtrinsicPayloadValue | Uint8Array | string): GenericExtrinsic<A> {
     (this._raw as ExtrinsicVx).addSignature(signer, signature, payload);
 
     return this;
@@ -225,7 +225,7 @@ export class GenericExtrinsic extends ExtrinsicBase implements IExtrinsic {
   /**
    * @description Sign the extrinsic with a specific keypair
    */
-  public sign (account: IKeyringPair, options: SignatureOptions): GenericExtrinsic {
+  public sign (account: IKeyringPair, options: SignatureOptions): GenericExtrinsic<A> {
     (this._raw as ExtrinsicVx).sign(account, options);
 
     return this;
@@ -234,7 +234,7 @@ export class GenericExtrinsic extends ExtrinsicBase implements IExtrinsic {
   /**
    * @describe Adds a fake signature to the extrinsic
    */
-  public signFake (signer: Address | Uint8Array | string, options: SignatureOptions): GenericExtrinsic {
+  public signFake (signer: Address | Uint8Array | string, options: SignatureOptions): GenericExtrinsic<A> {
     (this._raw as ExtrinsicVx).signFake(signer, options);
 
     return this;

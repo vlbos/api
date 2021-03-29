@@ -1,13 +1,13 @@
-// Copyright 2017-2020 @polkadot/api-derive authors & contributors
+// Copyright 2017-2021 @polkadot/api-derive authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import type { Observable } from 'rxjs';
 import type { ApiInterfaceRx } from '@polkadot/api/types';
 import type { u64 } from '@polkadot/types';
 import type { SessionIndex } from '@polkadot/types/interfaces';
-import type { DeriveSessionInfo, DeriveSessionIndexes } from '../types';
+import type { Observable } from '@polkadot/x-rxjs';
+import type { DeriveSessionIndexes, DeriveSessionInfo } from '../types';
 
-import { map } from 'rxjs/operators';
+import { map } from '@polkadot/x-rxjs/operators';
 
 import { memo } from '../util';
 
@@ -35,6 +35,7 @@ function queryAura (api: ApiInterfaceRx): Observable<DeriveSessionInfo> {
         [
           false,
           api.registry.createType('u64', 1),
+          // we may have aura without staking (permissioned)
           api.consts.staking?.sessionsPerEra || api.registry.createType('SessionIndex', 1)
         ],
         indexes
@@ -50,7 +51,8 @@ function queryBabe (api: ApiInterfaceRx): Observable<DeriveSessionInfo> {
         [
           true,
           api.consts.babe.epochDuration,
-          api.consts.staking.sessionsPerEra
+          // we may have babe without staking (permissioned)
+          api.consts.staking?.sessionsPerEra || api.registry.createType('SessionIndex', 1)
         ],
         indexes
       ])

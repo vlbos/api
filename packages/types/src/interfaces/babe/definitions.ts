@@ -1,4 +1,4 @@
-// Copyright 2017-2020 @polkadot/types authors & contributors
+// Copyright 2017-2021 @polkadot/types authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 // order important in structs... :)
@@ -19,6 +19,10 @@ export default {
       _enum: ['PrimarySlots', 'PrimaryAndSecondaryPlainSlots', 'PrimaryAndSecondaryVRFSlots']
     },
     BabeAuthorityWeight: 'u64',
+    BabeEpochConfiguration: {
+      c: '(u64, u64)',
+      allowedSlots: 'AllowedSlots'
+    },
     BabeBlockWeight: 'u32',
     BabeEquivocationProof: {
       offender: 'AuthorityId',

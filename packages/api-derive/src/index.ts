@@ -1,12 +1,15 @@
-// Copyright 2017-2020 @polkadot/api-derive authors & contributors
+// Copyright 2017-2021 @polkadot/api-derive authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import type { Observable } from 'rxjs';
+import './detectPackage';
+
 import type { ApiInterfaceRx } from '@polkadot/api/types';
 import type { AnyFunction } from '@polkadot/types/types';
+import type { Observable } from '@polkadot/x-rxjs';
 
 import * as accounts from './accounts';
 import * as balances from './balances';
+import * as bounties from './bounties';
 import * as chain from './chain';
 import * as contracts from './contracts';
 import * as council from './council';
@@ -21,9 +24,10 @@ import * as technicalCommittee from './technicalCommittee';
 import * as treasury from './treasury';
 import * as tx from './tx';
 
+export { packageInfo } from './packageInfo';
 export * from './type';
 
-export const derive = { accounts, balances, chain, contracts, council, democracy, elections, imOnline, parachains, session, society, staking, technicalCommittee, treasury, tx };
+export const derive = { accounts, balances, bounties, chain, contracts, council, democracy, elections, imOnline, parachains, session, society, staking, technicalCommittee, treasury, tx };
 
 type DeriveSection<Section> = {
   [Method in keyof Section]: Section[Method] extends AnyFunction

@@ -1,7 +1,7 @@
-// Copyright 2017-2020 @polkadot/types authors & contributors
+// Copyright 2017-2021 @polkadot/types authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import type { H256 } from '../interfaces/runtime';
+import type { CodecHash, Hash } from '../interfaces/runtime';
 import type { AnyJson, Codec, Registry } from '../types';
 
 import { compactToU8a, u8aConcat, u8aToHex } from '@polkadot/util';
@@ -17,6 +17,8 @@ import { compareArray } from './utils';
  */
 export abstract class AbstractArray<T extends Codec> extends Array<T> implements Codec {
   public readonly registry: Registry;
+
+  public createdAtHash?: Hash;
 
   protected constructor (registry: Registry, ...values: T[]) {
     super(...values);
@@ -36,7 +38,7 @@ export abstract class AbstractArray<T extends Codec> extends Array<T> implements
   /**
    * @description returns a hash of the contents
    */
-  public get hash (): H256 {
+  public get hash (): CodecHash {
     return this.registry.hash(this.toU8a());
   }
 
@@ -158,5 +160,12 @@ export abstract class AbstractArray<T extends Codec> extends Array<T> implements
    */
   public includes (check: unknown): boolean {
     return this.some((value: T) => value.eq(check));
+  }
+
+  /**
+   * @description Returns a slice of an array
+   */
+  public slice (start?: number, end?: number): T[] {
+    return this.toArray().slice(start, end);
   }
 }

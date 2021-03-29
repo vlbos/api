@@ -1,22 +1,21 @@
-// Copyright 2017-2020 @polkadot/types authors & contributors
+// Copyright 2017-2021 @polkadot/types authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import { AccountId } from '../interfaces/runtime';
+import type { AccountId } from '../interfaces/runtime';
 
 import BN from 'bn.js';
-import { bnToBn } from '@polkadot/util';
+
+import { bnToU8a, isAscii, u8aToHex, u8aToString } from '@polkadot/util';
 
 import { Bytes } from '../primitive/Bytes';
 import { u32 } from '../primitive/U32';
 
 // there are all reversed since it is actually encoded as u32, LE,
 // this means that FRNK has the bytes as KNRF
-const CID_AURA = 0x61727561; // 'aura'
-const CID_BABE = 0x45424142; // 'BABE'
-const CID_GRPA = 0x4b4e5246; // 'FRNK' (don't ask, used to be afg1)
-const CID_POW = 0x5f776f70; // 'pow_'
-
-export { CID_AURA, CID_BABE, CID_GRPA, CID_POW };
+export const CID_AURA = 0x61727561; // 'aura'
+export const CID_BABE = 0x45424142; // 'BABE'
+export const CID_GRPA = 0x4b4e5246; // 'FRNK' (don't ask, used to be afg1)
+export const CID_POW = 0x5f776f70; // 'pow_'
 
 /**
  * @name GenericConsensusEngineId
@@ -25,10 +24,11 @@ export { CID_AURA, CID_BABE, CID_GRPA, CID_POW };
  */
 export class GenericConsensusEngineId extends u32 {
   public static idToString (input: number | BN): string {
-    return bnToBn(input)
-      .toArray('le')
-      .map((code): string => String.fromCharCode(code))
-      .join('');
+    const u8a = bnToU8a(input);
+
+    return isAscii(u8a)
+      ? u8aToString(u8a)
+      : u8aToHex(u8a);
   }
 
   public static stringToId (input: string): number {
@@ -87,6 +87,10 @@ export class GenericConsensusEngineId extends u32 {
     return this.registry.createType('AccountId', bytes);
   }
 
+  private _getH160Author (bytes: Bytes): AccountId {
+    return this.registry.createType('AccountId', bytes);
+  }
+
   /**
    * @description From the input bytes, decode into an author
    */
@@ -101,6 +105,11 @@ export class GenericConsensusEngineId extends u32 {
 
     if (this.isPow) {
       return this._getPowAuthor(bytes);
+    }
+
+    // Moonbeam is neither Aura nor Babe nor Pow and uses h160 addresses
+    if (bytes.length === 20) {
+      return this._getH160Author(bytes);
     }
 
     return undefined;

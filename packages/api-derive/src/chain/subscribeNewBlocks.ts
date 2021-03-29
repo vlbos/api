@@ -1,33 +1,37 @@
-// Copyright 2017-2020 @polkadot/api-derive authors & contributors
+// Copyright 2017-2021 @polkadot/api-derive authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import type { Observable } from 'rxjs';
 import type { ApiInterfaceRx } from '@polkadot/api/types';
-import type { EventRecord, Hash, SignedBlock } from '@polkadot/types/interfaces';
-import type { FullNewBlock } from '../types';
+import type { Vec } from '@polkadot/types';
+import type { EventRecord, SignedBlock } from '@polkadot/types/interfaces';
+import type { Observable } from '@polkadot/x-rxjs';
+import type { HeaderExtended, SignedBlockExtended } from '../type/types';
 
-import { combineLatest, of } from 'rxjs';
-import { map, switchMap } from 'rxjs/operators';
+import { combineLatest, of } from '@polkadot/x-rxjs';
+import { map, switchMap } from '@polkadot/x-rxjs/operators';
 
+import { createSignedBlockExtended } from '../type';
 import { memo } from '../util';
 
 /**
  * @name subscribeNewBlocks
  * @returns The latest block & events for that block
  */
-export function subscribeNewBlocks (instanceId: string, api: ApiInterfaceRx): () => Observable<FullNewBlock> {
-  return memo(instanceId, (): Observable<FullNewBlock> =>
+export function subscribeNewBlocks (instanceId: string, api: ApiInterfaceRx): () => Observable<SignedBlockExtended> {
+  return memo(instanceId, (): Observable<SignedBlockExtended> =>
     api.derive.chain.subscribeNewHeads().pipe(
-      switchMap((header): Observable<[Hash, EventRecord[], SignedBlock]> => {
-        const blockHash = header.hash;
+      switchMap((header): Observable<[SignedBlock, Vec<EventRecord>, HeaderExtended]> => {
+        const blockHash = header.createdAtHash || header.hash;
 
         return combineLatest(
-          of(blockHash),
+          api.rpc.chain.getBlock(blockHash),
           api.query.system.events.at(blockHash),
-          api.rpc.chain.getBlock(header.hash)
+          of(header)
         );
       }),
-      map(([blockHash, events, block]) => ({ block: block.block, blockHash, blockNumber: block.block.header.number.unwrap(), events, justification: block.justification }))
+      map(([block, events, header]) =>
+        createSignedBlockExtended(block.registry, block, events, header.validators)
+      )
     )
   );
 }

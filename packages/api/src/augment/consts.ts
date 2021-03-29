@@ -1,12 +1,14 @@
 // Auto-generated via `yarn polkadot-types-from-chain`, do not edit
 /* eslint-disable */
 
-import type { Vec, u16, u32, u64 } from '@polkadot/types';
+import type { Vec, u16, u32, u64, u8 } from '@polkadot/types';
 import type { Codec } from '@polkadot/types/types';
 import type { Balance, BalanceOf, BlockNumber, LockIdentifier, ModuleId, Moment, Perbill, Percent, Permill, RuntimeDbWeight, Weight } from '@polkadot/types/interfaces/runtime';
 import type { SessionIndex } from '@polkadot/types/interfaces/session';
 import type { EraIndex } from '@polkadot/types/interfaces/staking';
+import type { RuntimeVersion } from '@polkadot/types/interfaces/state';
 import type { WeightToFeeCoefficient } from '@polkadot/types/interfaces/support';
+import type { BlockLength, BlockWeights } from '@polkadot/types/interfaces/system';
 import type { ApiTypes } from '@polkadot/api/types';
 
 declare module '@polkadot/api/types/consts' {
@@ -14,8 +16,9 @@ declare module '@polkadot/api/types/consts' {
     babe: {
       [key: string]: Codec;
       /**
-       * The number of **slots** that an epoch takes. We couple sessions to
-       * epochs, i.e. we start a new session once the new epoch begins.
+       * The amount of time, in slots, that each epoch should last.
+       * NOTE: Currently it is not possible to change the epoch duration after
+       * the chain has started. Attempting to do so will brick block production.
        **/
       epochDuration: u64 & AugmentedConst<ApiType>;
       /**
@@ -34,31 +37,95 @@ declare module '@polkadot/api/types/consts' {
        **/
       existentialDeposit: Balance & AugmentedConst<ApiType>;
     };
+    bounties: {
+      [key: string]: Codec;
+      /**
+       * Percentage of the curator fee that will be reserved upfront as deposit for bounty curator.
+       **/
+      bountyCuratorDeposit: Permill & AugmentedConst<ApiType>;
+      /**
+       * The amount held on deposit for placing a bounty proposal.
+       **/
+      bountyDepositBase: BalanceOf & AugmentedConst<ApiType>;
+      /**
+       * The delay period for which a bounty beneficiary need to wait before claim the payout.
+       **/
+      bountyDepositPayoutDelay: BlockNumber & AugmentedConst<ApiType>;
+      /**
+       * Bounty duration in blocks.
+       **/
+      bountyUpdatePeriod: BlockNumber & AugmentedConst<ApiType>;
+      /**
+       * Minimum value for a bounty.
+       **/
+      bountyValueMinimum: BalanceOf & AugmentedConst<ApiType>;
+      /**
+       * The amount held on deposit per byte within bounty description.
+       **/
+      dataDepositPerByte: BalanceOf & AugmentedConst<ApiType>;
+      /**
+       * Maximum acceptable reason length.
+       **/
+      maximumReasonLength: u32 & AugmentedConst<ApiType>;
+    };
     contracts: {
       [key: string]: Codec;
       /**
-       * The maximum nesting level of a call/instantiate stack. A reasonable default
-       * value is 100.
+       * The maximum number of tries that can be queued for deletion.
        **/
-      maxDepth: u32 & AugmentedConst<ApiType>;
+      deletionQueueDepth: u32 & AugmentedConst<ApiType>;
       /**
-       * The maximum size of a storage value in bytes. A reasonable default is 16 KiB.
+       * The maximum amount of weight that can be consumed per block for lazy trie removal.
        **/
-      maxValueSize: u32 & AugmentedConst<ApiType>;
+      deletionWeightLimit: Weight & AugmentedConst<ApiType>;
       /**
-       * Price of a byte of storage per one block interval. Should be greater than 0.
+       * The balance every contract needs to deposit to stay alive indefinitely.
+       * 
+       * This is different from the [`Self::TombstoneDeposit`] because this only needs to be
+       * deposited while the contract is alive. Costs for additional storage are added to
+       * this base cost.
+       * 
+       * This is a simple way to ensure that contracts with empty storage eventually get deleted by
+       * making them pay rent. This creates an incentive to remove them early in order to save rent.
        **/
-      rentByteFee: BalanceOf & AugmentedConst<ApiType>;
+      depositPerContract: BalanceOf & AugmentedConst<ApiType>;
       /**
-       * The amount of funds a contract should deposit in order to offset
-       * the cost of one byte.
+       * The balance a contract needs to deposit per storage byte to stay alive indefinitely.
        * 
        * Let's suppose the deposit is 1,000 BU (balance units)/byte and the rent is 1 BU/byte/day,
        * then a contract with 1,000,000 BU that uses 1,000 bytes of storage would pay no rent.
        * But if the balance reduced to 500,000 BU and the storage stayed the same at 1,000,
        * then it would pay 500 BU/day.
        **/
-      rentDepositOffset: BalanceOf & AugmentedConst<ApiType>;
+      depositPerStorageByte: BalanceOf & AugmentedConst<ApiType>;
+      /**
+       * The balance a contract needs to deposit per storage item to stay alive indefinitely.
+       * 
+       * It works the same as [`Self::DepositPerStorageByte`] but for storage items.
+       **/
+      depositPerStorageItem: BalanceOf & AugmentedConst<ApiType>;
+      /**
+       * The maximum length of a contract code in bytes. This limit applies to the instrumented
+       * version of the code. Therefore `instantiate_with_code` can fail even when supplying
+       * a wasm binary below this maximum size.
+       **/
+      maxCodeSize: u32 & AugmentedConst<ApiType>;
+      /**
+       * The maximum nesting level of a call/instantiate stack.
+       **/
+      maxDepth: u32 & AugmentedConst<ApiType>;
+      /**
+       * The maximum size of a storage value and event payload in bytes.
+       **/
+      maxValueSize: u32 & AugmentedConst<ApiType>;
+      /**
+       * The fraction of the deposit that should be used as rent per block.
+       * 
+       * When a contract hasn't enough balance deposited to stay alive indefinitely it needs
+       * to pay per block for the storage it consumes that is not covered by the deposit.
+       * This determines how high this rent payment is per block as a fraction of the deposit.
+       **/
+      rentFraction: Perbill & AugmentedConst<ApiType>;
       /**
        * Number of block delay an extrinsic claim surcharge has.
        * 
@@ -66,15 +133,6 @@ declare module '@polkadot/api/types/consts' {
        * for current_block - delay
        **/
       signedClaimHandicap: BlockNumber & AugmentedConst<ApiType>;
-      /**
-       * A size offset for an contract. A just created account with untouched storage will have that
-       * much of storage from the perspective of the state rent.
-       * 
-       * This is a simple way to ensure that contracts with empty storage eventually get deleted
-       * by making them pay rent. This creates an incentive to remove them early in order to save
-       * rent.
-       **/
-      storageSizeOffset: u32 & AugmentedConst<ApiType>;
       /**
        * Reward that is received by the party whose touch has led
        * to removal of a contract.
@@ -124,6 +182,22 @@ declare module '@polkadot/api/types/consts' {
        **/
       votingPeriod: BlockNumber & AugmentedConst<ApiType>;
     };
+    electionProviderMultiPhase: {
+      [key: string]: Codec;
+      /**
+       * Duration of the signed phase.
+       **/
+      signedPhase: BlockNumber & AugmentedConst<ApiType>;
+      /**
+       * The minimum amount of improvement to the solution score that defines a solution as
+       * "better" (in any phase).
+       **/
+      solutionImprovementThreshold: Perbill & AugmentedConst<ApiType>;
+      /**
+       * Duration of the unsigned phase.
+       **/
+      unsignedPhase: BlockNumber & AugmentedConst<ApiType>;
+    };
     elections: {
       [key: string]: Codec;
       candidacyBond: BalanceOf & AugmentedConst<ApiType>;
@@ -131,7 +205,54 @@ declare module '@polkadot/api/types/consts' {
       desiredRunnersUp: u32 & AugmentedConst<ApiType>;
       moduleId: LockIdentifier & AugmentedConst<ApiType>;
       termDuration: BlockNumber & AugmentedConst<ApiType>;
-      votingBond: BalanceOf & AugmentedConst<ApiType>;
+      votingBondBase: BalanceOf & AugmentedConst<ApiType>;
+      votingBondFactor: BalanceOf & AugmentedConst<ApiType>;
+    };
+    gilt: {
+      [key: string]: Codec;
+      /**
+       * Portion of the queue which is free from ordering and just a FIFO.
+       * 
+       * Must be no greater than `MaxQueueLen`.
+       **/
+      fifoQueueLen: u32 & AugmentedConst<ApiType>;
+      /**
+       * The number of blocks between consecutive attempts to issue more gilts in an effort to
+       * get to the target amount to be frozen.
+       * 
+       * A larger value results in fewer storage hits each block, but a slower period to get to
+       * the target.
+       **/
+      intakePeriod: BlockNumber & AugmentedConst<ApiType>;
+      /**
+       * The maximum amount of bids that can be turned into issued gilts each block. A larger
+       * value here means less of the block available for transactions should there be a glut of
+       * bids to make into gilts to reach the target.
+       **/
+      maxIntakeBids: u32 & AugmentedConst<ApiType>;
+      /**
+       * Maximum number of items that may be in each duration queue.
+       **/
+      maxQueueLen: u32 & AugmentedConst<ApiType>;
+      /**
+       * The minimum amount of funds that may be offered to freeze for a gilt. Note that this
+       * does not actually limit the amount which may be frozen in a gilt since gilts may be
+       * split up in order to satisfy the desired amount of funds under gilts.
+       * 
+       * It should be at least big enough to ensure that there is no possible storage spam attack
+       * or queue-filling attack.
+       **/
+      minFreeze: BalanceOf & AugmentedConst<ApiType>;
+      /**
+       * The base period for the duration queues. This is the common multiple across all
+       * supported freezing durations that can be bid upon.
+       **/
+      period: BlockNumber & AugmentedConst<ApiType>;
+      /**
+       * Number of duration queues in total. This sets the maximum duration supported, which is
+       * this value multiplied by `Period`.
+       **/
+      queueCount: u32 & AugmentedConst<ApiType>;
     };
     identity: {
       [key: string]: Codec;
@@ -171,6 +292,11 @@ declare module '@polkadot/api/types/consts' {
        **/
       deposit: BalanceOf & AugmentedConst<ApiType>;
     };
+    lottery: {
+      [key: string]: Codec;
+      maxCalls: u32 & AugmentedConst<ApiType>;
+      moduleId: ModuleId & AugmentedConst<ApiType>;
+    };
     multisig: {
       [key: string]: Codec;
       /**
@@ -190,15 +316,20 @@ declare module '@polkadot/api/types/consts' {
     proxy: {
       [key: string]: Codec;
       /**
-       * `AnnouncementDepositBase` metadata shadow.
+       * The base amount of currency needed to reserve for creating an announcement.
+       * 
+       * This is held when a new storage item holding a `Balance` is created (typically 16 bytes).
        **/
       announcementDepositBase: BalanceOf & AugmentedConst<ApiType>;
       /**
-       * `AnnouncementDepositFactor` metadata shadow.
+       * The amount of currency needed per announcement made.
+       * 
+       * This is held for adding an `AccountId`, `Hash` and `BlockNumber` (typically 68 bytes)
+       * into a pre-existing storage value.
        **/
       announcementDepositFactor: BalanceOf & AugmentedConst<ApiType>;
       /**
-       * `MaxPending` metadata shadow.
+       * The maximum amount of time-delayed announcements that are allowed to be pending.
        **/
       maxPending: u32 & AugmentedConst<ApiType>;
       /**
@@ -207,10 +338,17 @@ declare module '@polkadot/api/types/consts' {
       maxProxies: u16 & AugmentedConst<ApiType>;
       /**
        * The base amount of currency needed to reserve for creating a proxy.
+       * 
+       * This is held for an additional storage item whose value size is
+       * `sizeof(Balance)` bytes and whose key size is `sizeof(AccountId)` bytes.
        **/
       proxyDepositBase: BalanceOf & AugmentedConst<ApiType>;
       /**
        * The amount of currency needed per proxy added.
+       * 
+       * This is held for adding 32 bytes plus an instance of `ProxyType` more into a pre-existing
+       * storage value. Thus, when configuring `ProxyDepositFactor` one should take into account
+       * `32 + proxy_type.encode().len()` bytes of data.
        **/
       proxyDepositFactor: BalanceOf & AugmentedConst<ApiType>;
     };
@@ -273,32 +411,12 @@ declare module '@polkadot/api/types/consts' {
        **/
       bondingDuration: EraIndex & AugmentedConst<ApiType>;
       /**
-       * The number of blocks before the end of the era from which election submissions are allowed.
-       * 
-       * Setting this to zero will disable the offchain compute and only on-chain seq-phragmen will
-       * be used.
-       * 
-       * This is bounded by being within the last session. Hence, setting it to a value more than the
-       * length of a session will be pointless.
-       **/
-      electionLookahead: BlockNumber & AugmentedConst<ApiType>;
-      /**
-       * Maximum number of balancing iterations to run in the offchain submission.
-       * 
-       * If set to 0, balance_solution will not be executed at all.
-       **/
-      maxIterations: u32 & AugmentedConst<ApiType>;
-      /**
        * The maximum number of nominators rewarded for each validator.
        * 
        * For each validator only the `$MaxNominatorRewardedPerValidator` biggest stakers can claim
        * their reward. This used to limit the i/o cost for the nominator payout.
        **/
       maxNominatorRewardedPerValidator: u32 & AugmentedConst<ApiType>;
-      /**
-       * The threshold of improvement that should be provided for a new solution to be accepted.
-       **/
-      minSolutionScoreBump: Perbill & AugmentedConst<ApiType>;
       /**
        * Number of sessions per era.
        **/
@@ -315,29 +433,33 @@ declare module '@polkadot/api/types/consts' {
     system: {
       [key: string]: Codec;
       /**
-       * The base weight of executing a block, independent of the transactions in the block.
-       **/
-      blockExecutionWeight: Weight & AugmentedConst<ApiType>;
-      /**
-       * The maximum number of blocks to allow in mortal eras.
+       * Maximum number of block number to block hash mappings to keep (oldest pruned first).
        **/
       blockHashCount: BlockNumber & AugmentedConst<ApiType>;
+      /**
+       * The maximum length of a block (in bytes).
+       **/
+      blockLength: BlockLength & AugmentedConst<ApiType>;
+      /**
+       * Block & extrinsics weights: base values and limits.
+       **/
+      blockWeights: BlockWeights & AugmentedConst<ApiType>;
       /**
        * The weight of runtime database operations the runtime can invoke.
        **/
       dbWeight: RuntimeDbWeight & AugmentedConst<ApiType>;
       /**
-       * The base weight of an Extrinsic in the block, independent of the of extrinsic being executed.
+       * The designated SS85 prefix of this chain.
+       * 
+       * This replaces the "ss58Format" property declared in the chain spec. Reason is
+       * that the runtime should know about the prefix in order to make use of it as
+       * an identifier of the chain.
        **/
-      extrinsicBaseWeight: Weight & AugmentedConst<ApiType>;
+      ss58Prefix: u8 & AugmentedConst<ApiType>;
       /**
-       * The maximum length of a block (in bytes).
+       * Get the chain's current version.
        **/
-      maximumBlockLength: u32 & AugmentedConst<ApiType>;
-      /**
-       * The maximum weight of a block.
-       **/
-      maximumBlockWeight: Weight & AugmentedConst<ApiType>;
+      version: RuntimeVersion & AugmentedConst<ApiType>;
     };
     timestamp: {
       [key: string]: Codec;
@@ -348,6 +470,29 @@ declare module '@polkadot/api/types/consts' {
        * period on default settings.
        **/
       minimumPeriod: Moment & AugmentedConst<ApiType>;
+    };
+    tips: {
+      [key: string]: Codec;
+      /**
+       * The amount held on deposit per byte within the tip report reason.
+       **/
+      dataDepositPerByte: BalanceOf & AugmentedConst<ApiType>;
+      /**
+       * Maximum acceptable reason length.
+       **/
+      maximumReasonLength: u32 & AugmentedConst<ApiType>;
+      /**
+       * The period for which a tip remains open after is has achieved threshold tippers.
+       **/
+      tipCountdown: BlockNumber & AugmentedConst<ApiType>;
+      /**
+       * The amount of the final tip which goes to the original reporter of the tip.
+       **/
+      tipFindersFee: Percent & AugmentedConst<ApiType>;
+      /**
+       * The amount held on deposit for placing a tip report.
+       **/
+      tipReportDepositBase: BalanceOf & AugmentedConst<ApiType>;
     };
     transactionPayment: {
       [key: string]: Codec;
@@ -363,30 +508,9 @@ declare module '@polkadot/api/types/consts' {
     treasury: {
       [key: string]: Codec;
       /**
-       * Percentage of the curator fee that will be reserved upfront as deposit for bounty curator.
-       **/
-      bountyCuratorDeposit: Permill & AugmentedConst<ApiType>;
-      /**
-       * The amount held on deposit for placing a bounty proposal.
-       **/
-      bountyDepositBase: BalanceOf & AugmentedConst<ApiType>;
-      /**
-       * The delay period for which a bounty beneficiary need to wait before claim the payout.
-       **/
-      bountyDepositPayoutDelay: BlockNumber & AugmentedConst<ApiType>;
-      bountyValueMinimum: BalanceOf & AugmentedConst<ApiType>;
-      /**
        * Percentage of spare funds (if any) that are burnt per spend period.
        **/
       burn: Permill & AugmentedConst<ApiType>;
-      /**
-       * The amount held on deposit per byte within the tip report reason or bounty description.
-       **/
-      dataDepositPerByte: BalanceOf & AugmentedConst<ApiType>;
-      /**
-       * Maximum acceptable reason length.
-       **/
-      maximumReasonLength: u32 & AugmentedConst<ApiType>;
       /**
        * The treasury's module id, used for deriving its sovereign account ID.
        **/
@@ -404,18 +528,6 @@ declare module '@polkadot/api/types/consts' {
        * Period between successive spends.
        **/
       spendPeriod: BlockNumber & AugmentedConst<ApiType>;
-      /**
-       * The period for which a tip remains open after is has achieved threshold tippers.
-       **/
-      tipCountdown: BlockNumber & AugmentedConst<ApiType>;
-      /**
-       * The amount of the final tip which goes to the original reporter of the tip.
-       **/
-      tipFindersFee: Percent & AugmentedConst<ApiType>;
-      /**
-       * The amount held on deposit for placing a tip report.
-       **/
-      tipReportDepositBase: BalanceOf & AugmentedConst<ApiType>;
     };
     vesting: {
       [key: string]: Codec;

@@ -1,5 +1,8 @@
-// Copyright 2017-2020 @polkadot/metadata authors & contributors
+// Copyright 2017-2021 @polkadot/metadata authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
+import './detectPackage';
+
 export { Metadata } from './Metadata';
-export { constantsFromMeta, expandMetadata, extrinsicsFromMeta, storageFromMeta } from './decorate';
+export { decorateConstants, decorateExtrinsics, decorateStorage, expandMetadata } from './decorate';
+export { packageInfo } from './packageInfo';

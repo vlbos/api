@@ -1,9 +1,9 @@
-// Copyright 2017-2020 @polkadot/types authors & contributors
+// Copyright 2017-2021 @polkadot/types authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import type { AnyString, AnyU8a, Registry } from '../types';
 
-import { hexToU8a, isHex, isString, isU8a, u8aToU8a, assert } from '@polkadot/util';
+import { assert, hexToU8a, isHex, isString, isU8a, u8aToU8a } from '@polkadot/util';
 import { decodeAddress, encodeAddress } from '@polkadot/util-crypto';
 
 import { U8aFixed } from '../codec/U8aFixed';

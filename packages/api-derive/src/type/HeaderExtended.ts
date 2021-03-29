@@ -1,59 +1,42 @@
-// Copyright 2017-2020 @polkadot/api-derive authors & contributors
+// Copyright 2017-2021 @polkadot/api-derive authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import type { AccountId, Header } from '@polkadot/types/interfaces';
-import type { AnyJson, Constructor, Registry } from '@polkadot/types/types';
-
-import runtimeTypes from '@polkadot/types/interfaces/runtime/definitions';
-import { Struct } from '@polkadot/types';
+import type { Registry } from '@polkadot/types/types';
+import type { HeaderExtended } from './types';
 
 import { extractAuthor } from './util';
 
-// We can ignore the properties, added via Struct.with
-const _Header = Struct.with(runtimeTypes.types.Header as any) as Constructor<Header>;
+export function createHeaderExtended (registry: Registry, header?: Header, validators?: AccountId[]): HeaderExtended {
+  // an instance of the base extrinsic for us to extend
+  const HeaderBase = registry.createClass('Header');
 
-/**
- * @name HeaderExtended
- * @description
- * A [[Block]] header with an additional `author` field that indicates the block author
- */
-export class HeaderExtended extends _Header {
-  readonly #author?: AccountId;
+  class Implementation extends HeaderBase implements HeaderExtended {
+    readonly #author?: AccountId;
+    readonly #validators?: AccountId[];
 
-  constructor (registry: Registry, header?: Header, sessionValidators?: AccountId[]) {
-    super(registry, header);
+    constructor (registry: Registry, header?: Header, validators?: AccountId[]) {
+      super(registry, header);
 
-    this.#author = extractAuthor(this.digest, sessionValidators);
+      this.#author = extractAuthor(this.digest, validators);
+      this.#validators = validators;
+      this.createdAtHash = header?.createdAtHash;
+    }
+
+    /**
+     * @description Convenience method, returns the author for the block
+     */
+    public get author (): AccountId | undefined {
+      return this.#author;
+    }
+
+    /**
+     * @description Convenience method, returns the validators for the block
+     */
+    public get validators (): AccountId[] | undefined {
+      return this.#validators;
+    }
   }
 
-  /**
-   * @description Convenience method, returns the author for the block
-   */
-  public get author (): AccountId | undefined {
-    return this.#author;
-  }
-
-  /**
-   * @description Creates a human-friendly JSON representation
-   */
-  public toHuman (isExtended?: boolean): Record<string, AnyJson> {
-    return {
-      ...super.toHuman(isExtended),
-      author: this.author
-        ? this.author.toHuman()
-        : undefined
-    };
-  }
-
-  /**
-   * @description Creates the JSON representation
-   */
-  public toJSON (): Record<string, AnyJson> {
-    return {
-      ...super.toJSON(),
-      author: this.author
-        ? this.author.toJSON()
-        : undefined
-    };
-  }
+  return new Implementation(registry, header, validators);
 }

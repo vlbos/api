@@ -1,10 +1,10 @@
-// Copyright 2017-2020 @polkadot/metadata authors & contributors
+// Copyright 2017-2021 @polkadot/metadata authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import { TypeRegistry } from '@polkadot/types/create';
 
-import staticData from '../static';
 import { Metadata } from '../Metadata';
+import staticData from '../static';
 
 describe('toCallsOnly', (): void => {
   const registry = new TypeRegistry();

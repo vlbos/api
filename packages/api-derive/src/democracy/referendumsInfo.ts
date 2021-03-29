@@ -1,16 +1,17 @@
-// Copyright 2017-2020 @polkadot/api-derive authors & contributors
+// Copyright 2017-2021 @polkadot/api-derive authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import type { Observable } from 'rxjs';
 import type { ApiInterfaceRx } from '@polkadot/api/types';
 import type { Option, Vec } from '@polkadot/types';
-import type { AccountId, ReferendumInfo, ReferendumInfoTo239, Vote, Voting, VotingDirectVote, VotingDelegating } from '@polkadot/types/interfaces';
+import type { AccountId, ReferendumInfo, ReferendumInfoTo239, Vote, Voting, VotingDelegating, VotingDirectVote } from '@polkadot/types/interfaces';
+import type { Observable } from '@polkadot/x-rxjs';
 import type { DeriveBalancesAccount, DeriveReferendum, DeriveReferendumVote, DeriveReferendumVotes } from '../types';
 
 import BN from 'bn.js';
-import { combineLatest, of } from 'rxjs';
-import { map, switchMap } from 'rxjs/operators';
+
 import { isFunction } from '@polkadot/util';
+import { combineLatest, of } from '@polkadot/x-rxjs';
+import { map, switchMap } from '@polkadot/x-rxjs/operators';
 
 import { memo } from '../util';
 import { calcVotes, getStatus, parseImage } from './util';
@@ -66,9 +67,9 @@ function extractVotes (mapped: [AccountId, Voting][], referendumId: BN): DeriveR
 }
 
 function votesCurr (api: ApiInterfaceRx, referendumId: BN): Observable<DeriveReferendumVote[]> {
-  return api.query.democracy.votingOf.entries<Voting>().pipe(
+  return api.query.democracy.votingOf.entries<Voting, [AccountId]>().pipe(
     map((allVoting): DeriveReferendumVote[] => {
-      const mapped = allVoting.map(([key, voting]): [AccountId, Voting] => [key.args[0] as AccountId, voting]);
+      const mapped = allVoting.map(([{ args: [accountId] }, voting]): [AccountId, Voting] => [accountId, voting]);
       const votes = extractVotes(mapped, referendumId);
       const delegations = mapped
         .filter(([, voting]) => voting.isDelegating)

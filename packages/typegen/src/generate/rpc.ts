@@ -1,13 +1,28 @@
-// Copyright 2017-2020 @polkadot/typegen authors & contributors
+// Copyright 2017-2021 @polkadot/typegen authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
+import type { TypeRegistry } from '@polkadot/types/create';
 import type { Definitions } from '@polkadot/types/types';
+import type { ExtraTypes } from './types';
 
 import Handlebars from 'handlebars';
-import { TypeRegistry } from '@polkadot/types/create';
+
 import * as defaultDefinitions from '@polkadot/types/interfaces/definitions';
 
-import { createImports, getSimilarTypes, formatType, readTemplate, registerDefinitions, setImports, writeFile } from '../util';
+import { createImports, formatType, getSimilarTypes, initMeta, readTemplate, setImports, writeFile } from '../util';
+
+interface ItemDef {
+  args: string;
+  docs: string[];
+  generic: string | undefined;
+  name: string;
+  type: string | undefined;
+}
+
+interface ModuleDef {
+  items: ItemDef[];
+  name: string;
+}
 
 const StorageKeyTye = 'StorageKey | string | Uint8Array | any';
 
@@ -15,9 +30,9 @@ const template = readTemplate('rpc');
 const generateRpcTypesTemplate = Handlebars.compile(template);
 
 /** @internal */
-export function generateRpcTypes (registry: TypeRegistry, importDefinitions: Record<string, Definitions>, dest: string, extraTypes: Record<string, Record<string, { types: Record<string, any> }>> = {}): void {
+export function generateRpcTypes (registry: TypeRegistry, importDefinitions: Record<string, Definitions>, dest: string, extraTypes: ExtraTypes = {}): void {
   writeFile(dest, (): string => {
-    const allTypes: Record<string, Record<string, { types: Record<string, any> }>> = { '@polkadot/types/interfaces': importDefinitions, ...extraTypes };
+    const allTypes: ExtraTypes = { '@polkadot/types/interfaces': importDefinitions, ...extraTypes };
     const imports = createImports(allTypes);
     const definitions = imports.definitions as Record<string, Definitions>;
     const allDefs = Object.entries(allTypes).reduce((defs, [path, obj]) => {
@@ -29,6 +44,7 @@ export function generateRpcTypes (registry: TypeRegistry, importDefinitions: Rec
       .filter((key) => Object.keys(definitions[key].rpc || {}).length !== 0)
       .sort();
 
+    const additional: Record<string, ModuleDef> = {};
     const modules = rpcKeys.map((sectionFullName) => {
       const rpc = definitions[sectionFullName].rpc;
       const section = sectionFullName.split('/').pop();
@@ -78,20 +94,35 @@ export function generateRpcTypes (registry: TypeRegistry, importDefinitions: Rec
           generic = '';
         }
 
-        return {
+        const item = {
           args: args.join(', '),
           docs: [def.description],
           generic,
           name: methodName,
           type
         };
-      });
+
+        if (def.aliasSection) {
+          if (!additional[def.aliasSection]) {
+            additional[def.aliasSection] = {
+              items: [],
+              name: def.aliasSection
+            };
+          }
+
+          additional[def.aliasSection].items.push(item);
+
+          return null;
+        }
+
+        return item;
+      }).filter((item): item is ItemDef => !!item);
 
       return {
         items: allMethods,
-        name: section
+        name: section || 'unknown'
       };
-    });
+    }).concat(...Object.values(additional)).sort((a, b) => a.name.localeCompare(b.name));
 
     imports.typesTypes.Observable = true;
 
@@ -111,10 +142,8 @@ export function generateRpcTypes (registry: TypeRegistry, importDefinitions: Rec
   });
 }
 
-export function generateDefaultRpc (dest = 'packages/api/src/augment/rpc.ts', extraTypes: Record<string, Record<string, { types: Record<string, any> }>> = {}): void {
-  const registry = new TypeRegistry();
-
-  registerDefinitions(registry, extraTypes);
+export function generateDefaultRpc (dest = 'packages/api/src/augment/rpc.ts', extraTypes: ExtraTypes = {}): void {
+  const { registry } = initMeta(undefined, extraTypes);
 
   generateRpcTypes(
     registry,

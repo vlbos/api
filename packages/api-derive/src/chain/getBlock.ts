@@ -1,13 +1,14 @@
-// Copyright 2017-2020 @polkadot/api-derive authors & contributors
+// Copyright 2017-2021 @polkadot/api-derive authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import type { Observable } from 'rxjs';
-import { ApiInterfaceRx } from '@polkadot/api/types';
+import type { ApiInterfaceRx } from '@polkadot/api/types';
+import type { Observable } from '@polkadot/x-rxjs';
+import type { SignedBlockExtended } from '../type/types';
 
-import { combineLatest, of } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { combineLatest, of } from '@polkadot/x-rxjs';
+import { catchError, map } from '@polkadot/x-rxjs/operators';
 
-import { SignedBlockExtended } from '../type';
+import { createSignedBlockExtended } from '../type';
 import { memo } from '../util';
 
 /**
@@ -27,12 +28,13 @@ export function getBlock (instanceId: string, api: ApiInterfaceRx): (hash: Uint8
   return memo(instanceId, (hash: Uint8Array | string): Observable<SignedBlockExtended | undefined> =>
     combineLatest([
       api.rpc.chain.getBlock(hash),
+      api.query.system.events.at(hash),
       api.query.session
         ? api.query.session.validators.at(hash)
         : of([])
     ]).pipe(
-      map(([signedBlock, validators]): SignedBlockExtended =>
-        new SignedBlockExtended(api.registry, signedBlock, validators)
+      map(([signedBlock, events, validators]): SignedBlockExtended =>
+        createSignedBlockExtended(api.registry, signedBlock, events, validators)
       ),
       catchError((): Observable<undefined> =>
         // where rpc.chain.getHeader throws, we will land here - it can happen that

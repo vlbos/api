@@ -1,14 +1,14 @@
-// Copyright 2017-2020 @polkadot/api-derive authors & contributors
+// Copyright 2017-2021 @polkadot/api-derive authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import type { Observable } from 'rxjs';
 import type { ApiInterfaceRx } from '@polkadot/api/types';
 import type { Option } from '@polkadot/types';
 import type { ProposalIndex, TreasuryProposal } from '@polkadot/types/interfaces';
+import type { Observable } from '@polkadot/x-rxjs';
 import type { DeriveCollectiveProposal, DeriveTreasuryProposal, DeriveTreasuryProposals } from '../types';
 
-import { combineLatest, of } from 'rxjs';
-import { map, switchMap } from 'rxjs/operators';
+import { combineLatest, of } from '@polkadot/x-rxjs';
+import { map, switchMap } from '@polkadot/x-rxjs/operators';
 
 import { memo } from '../util';
 
@@ -20,20 +20,20 @@ interface Result {
   proposalCount: ProposalIndex;
 }
 
-function parseResult (_api: ApiInterfaceRx, { allIds, allProposals, approvalIds, councilProposals, proposalCount }: Result): DeriveTreasuryProposals {
+function parseResult (api: ApiInterfaceRx, { allIds, allProposals, approvalIds, councilProposals, proposalCount }: Result): DeriveTreasuryProposals {
   const approvals: DeriveTreasuryProposal[] = [];
   const proposals: DeriveTreasuryProposal[] = [];
-  const councilTreasury = councilProposals.filter(({ proposal: { methodName, sectionName } }): boolean =>
-    sectionName === 'treasury' &&
-    ['approveProposal', 'rejectProposal'].includes(methodName)
+  const councilTreasury = councilProposals.filter(({ proposal }) =>
+    api.tx.treasury.approveProposal.is(proposal) ||
+    api.tx.treasury.rejectProposal.is(proposal)
   );
 
   allIds.forEach((id, index): void => {
     if (allProposals[index].isSome) {
       const council = councilTreasury
-        .filter(({ proposal }): boolean => id.eq(proposal.args[0]))
-        .sort((a, b): number => a.proposal.methodName.localeCompare(b.proposal.methodName));
-      const isApproval = approvalIds.some((approvalId): boolean => approvalId.eq(id));
+        .filter(({ proposal }) => id.eq(proposal.args[0]))
+        .sort((a, b) => a.proposal.method.localeCompare(b.proposal.method));
+      const isApproval = approvalIds.some((approvalId) => approvalId.eq(id));
       const derived = { council, id, proposal: allProposals[index].unwrap() };
 
       if (isApproval) {
@@ -61,7 +61,9 @@ function retrieveProposals (api: ApiInterfaceRx, proposalCount: ProposalIndex, a
 
   return combineLatest([
     api.query.treasury.proposals.multi<Option<TreasuryProposal>>(allIds),
-    api.derive.council.proposals()
+    api.derive.council
+      ? api.derive.council.proposals()
+      : of([] as DeriveCollectiveProposal[])
   ]).pipe(
     map(([allProposals, councilProposals]: [Option<TreasuryProposal>[], DeriveCollectiveProposal[]]): DeriveTreasuryProposals =>
       parseResult(api, { allIds, allProposals, approvalIds, councilProposals, proposalCount })

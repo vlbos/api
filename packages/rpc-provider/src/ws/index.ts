@@ -1,13 +1,15 @@
-// Copyright 2017-2020 @polkadot/rpc-provider authors & contributors
+// Copyright 2017-2021 @polkadot/rpc-provider authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 /* eslint-disable camelcase */
 
-import type { JsonRpcResponse, ProviderInterface, ProviderInterfaceCallback, ProviderInterfaceEmitted, ProviderInterfaceEmitCb } from '../types';
+import type { JsonRpcResponse, ProviderInterface, ProviderInterfaceCallback, ProviderInterfaceEmitCb, ProviderInterfaceEmitted } from '../types';
 
 import EventEmitter from 'eventemitter3';
+
 import { assert, isChildClass, isNull, isUndefined, logger } from '@polkadot/util';
-import WS from '@polkadot/x-ws';
+import { xglobal } from '@polkadot/x-global';
+import { WebSocket } from '@polkadot/x-ws';
 
 import { RpcCoder } from '../coder';
 import defaults from '../defaults';
@@ -39,6 +41,16 @@ const ALIASSES: { [index: string]: string } = {
 const RETRY_DELAY = 1000;
 
 const l = logger('api-ws');
+
+function eraseRecord<T> (record: Record<string, T>, cb?: (item: T) => void): void {
+  Object.keys(record).forEach((key): void => {
+    if (cb) {
+      cb(record[key]);
+    }
+
+    delete record[key];
+  });
+}
 
 /**
  * # @polkadot/rpc-provider/ws
@@ -159,11 +171,11 @@ export class WsProvider implements ProviderInterface {
   public async connect (): Promise<void> {
     try {
       this.#endpointIndex = (this.#endpointIndex + 1) % this.#endpoints.length;
-      this.#websocket = typeof WebSocket !== 'undefined' && isChildClass(WebSocket, WS)
-        ? new WS(this.#endpoints[this.#endpointIndex])
+      this.#websocket = typeof xglobal.WebSocket !== 'undefined' && isChildClass(xglobal.WebSocket, WebSocket)
+        ? new WebSocket(this.#endpoints[this.#endpointIndex])
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore - WS may be an instance of w3cwebsocket, which supports headers
-        : new WS(this.#endpoints[this.#endpointIndex], undefined, undefined, this.#headers, undefined, {
+        : new WebSocket(this.#endpoints[this.#endpointIndex], undefined, undefined, this.#headers, undefined, {
           // default: true
           fragmentOutgoingMessages: true,
           // default: 16K
@@ -187,14 +199,16 @@ export class WsProvider implements ProviderInterface {
    * @description Connect, never throwing an error, but rather forcing a retry
    */
   public async connectWithRetry (): Promise<void> {
-    try {
-      await this.connect();
-    } catch (error) {
-      setTimeout((): void => {
-        this.connectWithRetry().catch((): void => {
-          // does not throw
-        });
-      }, this.#autoConnectMs || RETRY_DELAY);
+    if (this.#autoConnectMs > 0) {
+      try {
+        await this.connect();
+      } catch (error) {
+        setTimeout((): void => {
+          this.connectWithRetry().catch((): void => {
+            // does not throw
+          });
+        }, this.#autoConnectMs);
+      }
     }
   }
 
@@ -241,8 +255,8 @@ export class WsProvider implements ProviderInterface {
    * @param params Encoded parameters as applicable for the method
    * @param subscription Subscription details (internally used)
    */
-  public send (method: string, params: any[], subscription?: SubscriptionHandler): Promise<any> {
-    return new Promise((resolve, reject): void => {
+  public send <T = any> (method: string, params: any[], subscription?: SubscriptionHandler): Promise<T> {
+    return new Promise<T>((resolve, reject): void => {
       try {
         assert(this.isConnected && !isNull(this.#websocket), 'WebSocket is not connected');
 
@@ -294,10 +308,8 @@ export class WsProvider implements ProviderInterface {
    * })
    * ```
    */
-  public async subscribe (type: string, method: string, params: any[], callback: ProviderInterfaceCallback): Promise<number | string> {
-    const id = await this.send(method, params, { callback, type }) as Promise<number | string>;
-
-    return id;
+  public subscribe (type: string, method: string, params: any[], callback: ProviderInterfaceCallback): Promise<number | string> {
+    return this.send<number | string>(method, params, { callback, type });
   }
 
   /**
@@ -318,9 +330,13 @@ export class WsProvider implements ProviderInterface {
 
     delete this.#subscriptions[subscription];
 
-    const result = await this.send(method, [id]) as Promise<boolean>;
-
-    return result;
+    try {
+      return this.isConnected && !isNull(this.#websocket)
+        ? this.send<boolean>(method, [id])
+        : true;
+    } catch (error) {
+      return false;
+    }
   }
 
   #emit = (type: ProviderInterfaceEmitted, ...args: any[]): void => {
@@ -328,12 +344,17 @@ export class WsProvider implements ProviderInterface {
   }
 
   #onSocketClose = (event: CloseEvent): void => {
+    const error = new Error(`disconnected from ${this.#endpoints[this.#endpointIndex]}: ${event.code}:: ${event.reason || getWSErrorString(event.code)}`);
+
     if (this.#autoConnectMs > 0) {
-      l.error(`disconnected from ${this.#endpoints[this.#endpointIndex]}: ${event.code}:: ${event.reason || getWSErrorString(event.code)}`);
+      l.error(error.message);
     }
 
     this.#isConnected = false;
     this.#emit('disconnected');
+    // reject all hanging requests
+    eraseRecord(this.#handlers, (handler) => handler.callback(error, undefined));
+    eraseRecord(this.#waitingForId);
 
     if (this.#autoConnectMs > 0) {
       setTimeout((): void => {

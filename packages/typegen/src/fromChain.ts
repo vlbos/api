@@ -1,12 +1,13 @@
-// Copyright 2017-2020 @polkadot/typegen authors & contributors
+// Copyright 2017-2021 @polkadot/typegen authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import path from 'path';
 import yargs from 'yargs';
-import { formatNumber } from '@polkadot/util';
-import WS from '@polkadot/x-ws';
 
-import { generateDefaultConsts, generateDefaultQuery, generateDefaultRpc, generateDefaultTx } from './generate';
+import { formatNumber } from '@polkadot/util';
+import { WebSocket } from '@polkadot/x-ws';
+
+import { generateDefaultConsts, generateDefaultErrors, generateDefaultEvents, generateDefaultQuery, generateDefaultRpc, generateDefaultTx } from './generate';
 import { HEADER, writeFile } from './util';
 
 function generate (metaHex: string, pkg: string | undefined, output: string, isStrict?: boolean): void {
@@ -18,6 +19,8 @@ function generate (metaHex: string, pkg: string | undefined, output: string, isS
     : {};
 
   generateDefaultConsts(path.join(process.cwd(), output, 'augment-api-consts.ts'), metaHex, extraTypes, isStrict);
+  generateDefaultErrors(path.join(process.cwd(), output, 'augment-api-errors.ts'), metaHex, extraTypes, isStrict);
+  generateDefaultEvents(path.join(process.cwd(), output, 'augment-api-events.ts'), metaHex, extraTypes, isStrict);
   generateDefaultQuery(path.join(process.cwd(), output, 'augment-api-query.ts'), metaHex, extraTypes, isStrict);
   generateDefaultRpc(path.join(process.cwd(), output, 'augment-api-rpc.ts'), extraTypes);
   generateDefaultTx(path.join(process.cwd(), output, 'augment-api-tx.ts'), metaHex, extraTypes, isStrict);
@@ -27,7 +30,7 @@ function generate (metaHex: string, pkg: string | undefined, output: string, isS
       HEADER('chain'),
       ...[
         '@polkadot/api/augment/rpc',
-        ...['consts', 'query', 'tx', 'rpc'].filter((key) => !!key).map((key) => `./augment-api-${key}`)
+        ...['consts', 'errors', 'events', 'query', 'tx', 'rpc'].filter((key) => !!key).map((key) => `./augment-api-${key}`)
       ].map((path) => `import '${path}';\n`)
     ].join('')
   );
@@ -59,7 +62,7 @@ export function main (): void {
 
   if (endpoint.startsWith('wss://') || endpoint.startsWith('ws://')) {
     try {
-      const websocket = new WS(endpoint);
+      const websocket = new WebSocket(endpoint);
 
       websocket.onclose = (event: { code: number; reason: string }): void => {
         console.error(`disconnected, code: '${event.code}' reason: '${event.reason}'`);

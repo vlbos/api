@@ -1,21 +1,23 @@
-// Copyright 2017-2020 @polkadot/metadata authors & contributors
+// Copyright 2017-2021 @polkadot/metadata authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import BN from 'bn.js';
+
 import { createTestPairs } from '@polkadot/keyring/testingPairs';
 import { TypeRegistry } from '@polkadot/types/create';
 
 import { Metadata } from '../../Metadata';
 import metadataStatic from '../../static';
-import { extrinsicsFromMeta } from './fromMetadata';
+import { decorateExtrinsics } from '..';
 
 const keyring = createTestPairs({ type: 'ed25519' }, false);
 const registry = new TypeRegistry();
 const metadata = new Metadata(registry, metadataStatic);
 
 registry.setMetadata(metadata);
+registry.register({ Address: 'IndicesLookupSource', LookupSource: 'IndicesLookupSource' });
 
-const extrinsics = extrinsicsFromMeta(registry, metadata);
+const extrinsics = decorateExtrinsics(registry, metadata.asLatest, metadata.version);
 
 describe('extrinsics', (): void => {
   it('encodes an actual transfer (actual data)', (): void => {
@@ -49,5 +51,39 @@ describe('extrinsics', (): void => {
       'ffd7568e5f0a7eda67a82691ff379ac4bba4f9c9b859fe779b5d46363b61ad2db9' + // to
       'e56c' // value
     );
+  });
+});
+
+describe('decorateExtrinsics', (): void => {
+  it('should throw if an incorrect number of args is supplied', (): void => {
+    expect(() => extrinsics.balances.setBalance()).toThrowError(/expects 3 arguments/);
+  });
+
+  it('should return a value if the storage function does not expect an argument', (): void => {
+    expect(() => extrinsics.balances.setBalance('5C62W7ELLAAfix9LYrcx5smtcffbhvThkM5x7xfMeYXCtGwF', 2, 3)).not.toThrow();
+  });
+
+  it('should return properly-encoded transactions', (): void => {
+    expect(
+      registry.createType('Extrinsic', extrinsics.timestamp.set([10101])).toU8a()
+    ).toEqual(
+      new Uint8Array([
+        // length (encoded)
+        4 << 2,
+        // version, no signature
+        4,
+        // index
+        3, 0,
+        // values, Compact<Moment>
+        116
+      ])
+    );
+  });
+
+  it('has working .is', (): void => {
+    const tx = extrinsics.balances.setBalance('5C62W7ELLAAfix9LYrcx5smtcffbhvThkM5x7xfMeYXCtGwF', 2, 3);
+
+    expect(extrinsics.balances.setBalance.is(tx)).toBe(true);
+    expect(extrinsics.balances.transfer.is(tx)).toBe(false);
   });
 });

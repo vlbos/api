@@ -1,10 +1,11 @@
-// Copyright 2017-2020 @polkadot/types authors & contributors
+// Copyright 2017-2021 @polkadot/types authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 // technically runtime can go below, but since it is the base, do it first
 export { default as runtime } from './runtime/definitions';
 
 // substrate types
+export { default as assets } from './assets/definitions';
 export { default as authorship } from './authorship/definitions';
 export { default as aura } from './aura/definitions';
 export { default as babe } from './babe/definitions';
@@ -18,9 +19,12 @@ export { default as engine } from './engine/definitions';
 export { default as evm } from './evm/definitions';
 export { default as extrinsics } from './extrinsics/definitions';
 export { default as genericAsset } from './genericAsset/definitions';
+export { default as gilt } from './gilt/definitions';
 export { default as grandpa } from './grandpa/definitions';
 export { default as identity } from './identity/definitions';
 export { default as imOnline } from './imOnline/definitions';
+export { default as lottery } from './lottery/definitions';
+export { default as mmr } from './mmr/definitions';
 export { default as offences } from './offences/definitions';
 export { default as proxy } from './proxy/definitions';
 export { default as recovery } from './recovery/definitions';
@@ -39,6 +43,7 @@ export { default as vesting } from './vesting/definitions';
 // polkadot-specific types
 export { default as attestations } from './attestations/definitions';
 export { default as claims } from './claims/definitions';
+export { default as crowdloan } from './crowdloan/definitions';
 export { default as parachains } from './parachains/definitions';
 export { default as poll } from './poll/definitions';
 export { default as purchase } from './purchase/definitions';
@@ -48,7 +53,7 @@ export { default as contractsAbi } from './contractsAbi/definitions';
 export { default as scaleInfo } from './scaleInfo/definitions';
 
 // other useful types
-export { default as ethereum } from './ethereum/definitions';
+export { default as eth } from './eth/definitions';
 
 // pull in metadata & rpc last, assuming that is uses info from above
 export { default as metadata } from './metadata/definitions';

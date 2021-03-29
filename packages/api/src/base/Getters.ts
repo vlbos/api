@@ -1,30 +1,21 @@
-// Copyright 2017-2020 @polkadot/api authors & contributors
+// Copyright 2017-2021 @polkadot/api authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import type { Metadata } from '@polkadot/metadata';
 import type { RpcInterface } from '@polkadot/rpc-core/types';
 import type { Text } from '@polkadot/types';
 import type { Hash, RuntimeVersion } from '@polkadot/types/interfaces';
-import type { ApiInterfaceRx, ApiTypes, DecoratedRpc, QueryableConsts, QueryableStorage, QueryableStorageMulti, SubmittableExtrinsics } from '../types';
+import type { ApiInterfaceRx, ApiTypes, DecoratedErrors, DecoratedEvents, DecoratedRpc, QueryableConsts, QueryableStorage, QueryableStorageMulti, SubmittableExtrinsics } from '../types';
 
 import { assertReturn } from '@polkadot/util';
 
+import { packageInfo } from '../packageInfo';
 import { Init } from './Init';
 
 interface PkgJson {
   name: string;
   version: string;
 }
-
-let pkgJson: PkgJson = { name: '@polkadot/api', version: '-' };
-
-import('../package.json')
-  .then((_pkgJson: unknown): void => {
-    pkgJson = _pkgJson as PkgJson;
-  })
-  .catch((): void => {
-    // ignore
-  });
 
 function assertResult<T> (value: T | undefined): T {
   return assertReturn(value, 'Api needs to be initialized before using, listen on \'ready\'');
@@ -64,6 +55,20 @@ export abstract class Getters<ApiType extends ApiTypes> extends Init<ApiType> {
   }
 
   /**
+   * @description Errors from metadata
+   */
+  public get errors (): DecoratedErrors<ApiType> {
+    return assertResult(this._errors);
+  }
+
+  /**
+   * @description Events from metadata
+   */
+  public get events (): DecoratedEvents<ApiType> {
+    return assertResult(this._events);
+  }
+
+  /**
    * @description  Returns the version of extrinsics in-use on this chain
    */
   public get extrinsicVersion (): number {
@@ -95,7 +100,7 @@ export abstract class Getters<ApiType extends ApiTypes> extends Init<ApiType> {
    * @description The library information name & version (from package.json)
    */
   public get libraryInfo (): string {
-    return `${pkgJson.name} v${pkgJson.version}`;
+    return `${(packageInfo as PkgJson).name} v${(packageInfo as PkgJson).version}`;
   }
 
   /**

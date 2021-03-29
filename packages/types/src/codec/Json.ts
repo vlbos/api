@@ -1,10 +1,10 @@
-// Copyright 2017-2020 @polkadot/types authors & contributors
+// Copyright 2017-2021 @polkadot/types authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import type { H256 } from '../interfaces/runtime';
+import type { CodecHash, Hash } from '../interfaces/runtime';
 import type { AnyJson, Codec, Registry } from '../types';
 
-import { isUndefined } from '@polkadot/util';
+import { isFunction, isUndefined } from '@polkadot/util';
 
 import { compareMap } from './utils';
 
@@ -23,6 +23,8 @@ function decodeJson (value?: Record<string, unknown> | null): [string, any][] {
  */
 export class Json extends Map<string, any> implements Codec {
   public readonly registry: Registry;
+
+  public createdAtHash?: Hash;
 
   constructor (registry: Registry, value?: Record<string, unknown> | null) {
     const decoded = decodeJson(value);
@@ -50,7 +52,7 @@ export class Json extends Map<string, any> implements Codec {
   /**
    * @description returns a hash of the contents
    */
-  public get hash (): H256 {
+  public get hash (): CodecHash {
     return this.registry.hash(this.toU8a());
   }
 
@@ -79,7 +81,13 @@ export class Json extends Map<string, any> implements Codec {
    * @description Converts the Object to to a human-friendly JSON, with additional fields, expansion and formatting of information
    */
   public toHuman (): Record<string, AnyJson> {
-    return this.toJSON();
+    return [...this.entries()].reduce((json: Record<string, AnyJson>, [key, value]): Record<string, AnyJson> => {
+      json[key] = isFunction((value as Codec).toHuman)
+        ? (value as Codec).toHuman()
+        : value as AnyJson;
+
+      return json;
+    }, {});
   }
 
   /**

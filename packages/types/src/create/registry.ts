@@ -1,19 +1,25 @@
-// Copyright 2017-2020 @polkadot/types authors & contributors
+// Copyright 2017-2021 @polkadot/types authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 /* eslint-disable @typescript-eslint/no-var-requires */
 
-import type { ChainProperties, DispatchErrorModule, H256 } from '../interfaces/types';
-import type { CallFunction, Codec, Constructor, InterfaceTypes, RegistryError, RegistryTypes, Registry, RegistryMetadata, RegisteredTypes } from '../types';
+import type { ExtDef } from '../extrinsic/signedExtensions/types';
+import type { ChainProperties, CodecHash, DispatchErrorModule, Hash } from '../interfaces/types';
+import type { CallFunction, Codec, CodecHasher, Constructor, InterfaceTypes, RegisteredTypes, Registry, RegistryError, RegistryTypes } from '../types';
 
-import { Metadata, extrinsicsFromMeta } from '@polkadot/metadata';
-import { BN_ZERO, assert, assertReturn, formatBalance, isFunction, isString, isU8a, logger, stringCamelCase, u8aToHex } from '@polkadot/util';
+// we are attempting to avoid circular refs, hence the Metadata path import
+import { decorateConstants, decorateExtrinsics } from '@polkadot/metadata/decorate';
+import { Metadata } from '@polkadot/metadata/Metadata';
+import { assert, assertReturn, BN_ZERO, formatBalance, isFunction, isString, isU8a, logger, stringCamelCase, u8aToHex } from '@polkadot/util';
 import { blake2AsU8a } from '@polkadot/util-crypto';
 
-import { Json, Raw } from '../codec';
+import { Json } from '../codec/Json';
+import { Raw } from '../codec/Raw';
 import { defaultExtensions, expandExtensionTypes, findUnknownExtensions } from '../extrinsic/signedExtensions';
-import { GenericEventData } from '../generic';
-import { DoNotConstruct } from '../primitive';
+import { GenericEventData } from '../generic/Event';
+import * as baseTypes from '../index.types';
+import * as definitions from '../interfaces/definitions';
+import { DoNotConstruct } from '../primitive/DoNotConstruct';
 import { createClass, getTypeClass } from './createClass';
 import { createType } from './createType';
 import { getTypeDef } from './getTypeDef';
@@ -21,23 +27,21 @@ import { getTypeDef } from './getTypeDef';
 const l = logger('registry');
 
 // create error mapping from metadata
-function decorateErrors (_: Registry, metadata: RegistryMetadata, metadataErrors: Record<string, RegistryError>): void {
+function injectErrors (_: Registry, metadata: Metadata, metadataErrors: Record<string, RegistryError>): void {
   const modules = metadata.asLatest.modules;
-  const isIndexed = modules.some(({ index }) => !index.eqn(255));
 
   // decorate the errors
   modules.forEach((section, _sectionIndex): void => {
-    const sectionIndex = isIndexed
-      ? section.index.toNumber()
-      : _sectionIndex;
+    const sectionIndex = metadata.version >= 12 ? section.index.toNumber() : _sectionIndex;
     const sectionName = stringCamelCase(section.name);
 
     section.errors.forEach(({ documentation, name }, index): void => {
       const eventIndex = new Uint8Array([sectionIndex, index]);
 
       metadataErrors[u8aToHex(eventIndex)] = {
-        documentation: documentation.map((d): string => d.toString()),
+        documentation: documentation.map((d) => d.toString()),
         index,
+        method: name.toString(),
         name: name.toString(),
         section: sectionName
       };
@@ -46,17 +50,14 @@ function decorateErrors (_: Registry, metadata: RegistryMetadata, metadataErrors
 }
 
 // create event classes from metadata
-function decorateEvents (registry: Registry, metadata: RegistryMetadata, metadataEvents: Record<string, Constructor<GenericEventData>>): void {
+function injectEvents (registry: Registry, metadata: Metadata, metadataEvents: Record<string, Constructor<GenericEventData>>): void {
   const modules = metadata.asLatest.modules;
-  const isIndexed = modules.some(({ index }) => !index.eqn(255));
 
   // decorate the events
   modules
-    .filter(({ events }): boolean => events.isSome)
+    .filter(({ events }) => events.isSome)
     .forEach((section, _sectionIndex): void => {
-      const sectionIndex = isIndexed
-        ? section.index.toNumber()
-        : _sectionIndex;
+      const sectionIndex = metadata.version >= 12 ? section.index.toNumber() : _sectionIndex;
       const sectionName = stringCamelCase(section.name);
 
       section.events.unwrap().forEach((meta, methodIndex): void => {
@@ -67,7 +68,7 @@ function decorateEvents (registry: Registry, metadata: RegistryMetadata, metadat
         let Types: Constructor<Codec>[] = [];
 
         try {
-          Types = typeDef.map((typeDef): Constructor<Codec> => getTypeClass(registry, typeDef));
+          Types = typeDef.map((typeDef) => getTypeClass(registry, typeDef));
         } catch (error) {
           l.error(error);
         }
@@ -82,8 +83,8 @@ function decorateEvents (registry: Registry, metadata: RegistryMetadata, metadat
 }
 
 // create extrinsic mapping from metadata
-function decorateExtrinsics (registry: Registry, metadata: RegistryMetadata, metadataCalls: Record<string, CallFunction>): void {
-  const extrinsics = extrinsicsFromMeta(registry, metadata);
+function injectExtrinsics (registry: Registry, metadata: Metadata, metadataCalls: Record<string, CallFunction>): void {
+  const extrinsics = decorateExtrinsics(registry, metadata.asLatest, metadata.version);
 
   // decorate the extrinsics
   Object.values(extrinsics).forEach((methods): void =>
@@ -91,6 +92,21 @@ function decorateExtrinsics (registry: Registry, metadata: RegistryMetadata, met
       metadataCalls[u8aToHex(method.callIndex)] = method;
     })
   );
+}
+
+// extract additional properties from the metadata
+function extractProperties (registry: Registry, metadata: Metadata): ChainProperties | undefined {
+  const original = registry.getChainProperties();
+  const constants = decorateConstants(registry, metadata.asLatest);
+  const ss58Format = constants.system?.ss58Prefix;
+
+  if (!ss58Format) {
+    return original;
+  }
+
+  const { tokenDecimals, tokenSymbol } = original || {};
+
+  return registry.createType('ChainProperties', { ss58Format, tokenDecimals, tokenSymbol });
 }
 
 export class TypeRegistry implements Registry {
@@ -118,19 +134,19 @@ export class TypeRegistry implements Registry {
 
   #signedExtensions: string[] = defaultExtensions;
 
-  constructor () {
-    // we only want to import these on creation, i.e. we want to avoid weird
-    // side-effects from circular references. (Since registry is injected
-    // into types, this can be a real concern now)
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const baseTypes: RegistryTypes = require('../index.types');
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const definitions: Record<string, { types: RegistryTypes }> = require('../interfaces/definitions');
+  #userExtensions?: ExtDef;
 
+  public createdAtHash?: Hash;
+
+  constructor (createdAtHash?: Hash | Uint8Array | string) {
     this.#knownDefaults = { Json, Metadata, Raw, ...baseTypes };
-    this.#knownDefinitions = definitions;
+    this.#knownDefinitions = definitions as unknown as Record<string, { types: RegistryTypes }>;
 
     this.init();
+
+    if (createdAtHash) {
+      this.createdAtHash = this.createType('Hash', createdAtHash);
+    }
   }
 
   public init (): this {
@@ -149,10 +165,16 @@ export class TypeRegistry implements Registry {
     return this;
   }
 
-  public get chainDecimals (): number {
-    return this.#chainProperties?.tokenDecimals.isSome
-      ? this.#chainProperties.tokenDecimals.unwrap().toNumber()
-      : 12;
+  public get chainDecimals (): number[] {
+    if (this.#chainProperties?.tokenDecimals.isSome) {
+      const allDecimals = this.#chainProperties.tokenDecimals.unwrap();
+
+      if (allDecimals.length) {
+        return allDecimals.map((b) => b.toNumber());
+      }
+    }
+
+    return [12];
   }
 
   public get chainSS58 (): number | undefined {
@@ -161,14 +183,24 @@ export class TypeRegistry implements Registry {
       : undefined;
   }
 
-  public get chainToken (): string {
-    return this.#chainProperties?.tokenSymbol.isSome
-      ? this.#chainProperties.tokenSymbol.unwrap().toString()
-      : formatBalance.getDefaults().unit;
+  public get chainTokens (): string[] {
+    if (this.#chainProperties?.tokenSymbol.isSome) {
+      const allTokens = this.#chainProperties.tokenSymbol.unwrap();
+
+      if (allTokens.length) {
+        return allTokens.map((s) => s.toString());
+      }
+    }
+
+    return [formatBalance.getDefaults().unit];
   }
 
   public get knownTypes (): RegisteredTypes {
     return this.#knownTypes;
+  }
+
+  public get unknownTypes (): string[] {
+    return [...this.#unknownTypes.keys()];
   }
 
   public get signedExtensions (): string[] {
@@ -257,8 +289,12 @@ export class TypeRegistry implements Registry {
       : undefined;
   }
 
-  public getDefinition (name: string): string | undefined {
-    return this.#definitions.get(name);
+  public getDefinition (typeName: string): string | undefined {
+    return this.#definitions.get(typeName);
+  }
+
+  public getModuleInstances (specName: string, moduleName: string): string[] | undefined {
+    return this.#knownTypes?.typesBundle?.spec?.[specName]?.instances?.[moduleName];
   }
 
   public getOrThrow <T extends Codec = Codec> (name: string, msg?: string): Constructor<T> {
@@ -270,11 +306,11 @@ export class TypeRegistry implements Registry {
   }
 
   public getSignedExtensionExtra (): Record<string, keyof InterfaceTypes> {
-    return expandExtensionTypes(this.#signedExtensions, 'extra');
+    return expandExtensionTypes(this.#signedExtensions, 'payload', this.#userExtensions);
   }
 
   public getSignedExtensionTypes (): Record<string, keyof InterfaceTypes> {
-    return expandExtensionTypes(this.#signedExtensions, 'types');
+    return expandExtensionTypes(this.#signedExtensions, 'extrinsic', this.#userExtensions);
   }
 
   public hasClass (name: string): boolean {
@@ -289,8 +325,8 @@ export class TypeRegistry implements Registry {
     return !this.#unknownTypes.get(name) && (this.hasClass(name) || this.hasDef(name));
   }
 
-  public hash (data: Uint8Array): H256 {
-    return this.createType('H256', this.#hasher(data));
+  public hash (data: Uint8Array): CodecHash {
+    return this.createType('CodecHash', this.#hasher(data));
   }
 
   public register (type: Constructor | RegistryTypes): void;
@@ -305,6 +341,7 @@ export class TypeRegistry implements Registry {
       this.#classes.set(arg1.name, arg1);
     } else if (isString(arg1)) {
       assert(isFunction(arg2), `Expected class definition passed to '${arg1}' registration`);
+      assert(arg1 !== arg2.toString(), `Unable to register circular ${arg1} === ${arg1}`);
 
       this.#classes.set(arg1, arg2);
     } else {
@@ -321,6 +358,8 @@ export class TypeRegistry implements Registry {
         const def = isString(type)
           ? type
           : JSON.stringify(type);
+
+        assert(name !== def, `Unable to register circular ${name} === ${def}`);
 
         // we already have this type, remove the classes registered for it
         if (this.#classes.has(name)) {
@@ -339,8 +378,8 @@ export class TypeRegistry implements Registry {
     }
   }
 
-  setHasher (hasher: (data: Uint8Array) => Uint8Array = blake2AsU8a): void {
-    this.#hasher = hasher;
+  setHasher (hasher?: CodecHasher | null): void {
+    this.#hasher = hasher || blake2AsU8a;
   }
 
   setKnownTypes (knownTypes: RegisteredTypes): void {
@@ -348,10 +387,10 @@ export class TypeRegistry implements Registry {
   }
 
   // sets the metadata
-  public setMetadata (metadata: RegistryMetadata, signedExtensions?: string[]): void {
-    decorateExtrinsics(this, metadata, this.#metadataCalls);
-    decorateErrors(this, metadata, this.#metadataErrors);
-    decorateEvents(this, metadata, this.#metadataEvents);
+  public setMetadata (metadata: Metadata, signedExtensions?: string[], userExtensions?: ExtDef): void {
+    injectExtrinsics(this, metadata, this.#metadataCalls);
+    injectErrors(this, metadata, this.#metadataErrors);
+    injectEvents(this, metadata, this.#metadataEvents);
 
     // setup the available extensions
     this.setSignedExtensions(
@@ -359,15 +398,22 @@ export class TypeRegistry implements Registry {
         metadata.asLatest.extrinsic.version.gt(BN_ZERO)
           ? metadata.asLatest.extrinsic.signedExtensions.map((key) => key.toString())
           : defaultExtensions
-      )
+      ),
+      userExtensions
+    );
+
+    // setup the chain properties with format overrides
+    this.setChainProperties(
+      extractProperties(this, metadata)
     );
   }
 
   // sets the available signed extensions
-  setSignedExtensions (signedExtensions: string[] = defaultExtensions): void {
+  setSignedExtensions (signedExtensions: string[] = defaultExtensions, userExtensions?: ExtDef): void {
     this.#signedExtensions = signedExtensions;
+    this.#userExtensions = userExtensions;
 
-    const unknown = findUnknownExtensions(this.#signedExtensions);
+    const unknown = findUnknownExtensions(this.#signedExtensions, this.#userExtensions);
 
     if (unknown.length) {
       l.warn(`Unknown signed extensions ${unknown.join(', ')} found, treating them as no-effect`);

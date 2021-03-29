@@ -1,4 +1,4 @@
-// Copyright 2017-2020 @polkadot/api authors & contributors
+// Copyright 2017-2021 @polkadot/api authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 // Augment the modules
@@ -6,13 +6,14 @@ import '@polkadot/api/augment';
 
 import type BN from 'bn.js';
 import type { DeriveCustom, ExactDerive } from '@polkadot/api-derive';
+import type { Metadata } from '@polkadot/metadata';
 import type { RpcInterface } from '@polkadot/rpc-core/types';
 import type { ProviderInterface, ProviderInterfaceEmitted } from '@polkadot/rpc-provider/types';
-import type { Metadata } from '@polkadot/metadata';
+import type { ExtDef } from '@polkadot/types/extrinsic/signedExtensions/types';
 import type { Hash, RuntimeVersion } from '@polkadot/types/interfaces';
-import type { DefinitionRpc, DefinitionRpcSub, Signer, SignatureOptions, Registry, RegisteredTypes } from '@polkadot/types/types';
-import type { DeriveAllSections } from '../util/decorate';
+import type { DefinitionRpc, DefinitionRpcSub, RegisteredTypes, Registry, SignatureOptions, Signer } from '@polkadot/types/types';
 import type { ApiBase } from '../base';
+import type { DeriveAllSections } from '../util/decorate';
 import type { QueryableConsts } from './consts';
 import type { DecoratedRpc } from './rpc';
 import type { QueryableStorage, QueryableStorageMulti } from './storage';
@@ -23,6 +24,8 @@ export { ApiBase } from '../base';
 export * from '../submittable/types';
 export * from './base';
 export * from './consts';
+export * from './errors';
+export * from './events';
 export * from './rpc';
 export * from './storage';
 export * from './submittable';
@@ -55,6 +58,10 @@ export interface ApiOptions extends RegisteredTypes {
    */
   rpc?: Record<string, Record<string, DefinitionRpc | DefinitionRpcSub>>;
   /**
+   * @description Any chain-specific signed extensions that are now well-known
+   */
+  signedExtensions?: ExtDef;
+  /**
    * @description An external signer which will be used to sign extrinsic when account passed in is not KeyringPair
    */
   signer?: Signer;
@@ -74,7 +81,7 @@ export interface ApiInterfaceRx {
   hasSubscriptions: boolean;
   registry: Registry;
   runtimeMetadata: Metadata;
-  runtimeVersion?: RuntimeVersion;
+  runtimeVersion: RuntimeVersion;
   query: QueryableStorage<'rxjs'>;
   queryMulti: QueryableStorageMulti<'rxjs'>;
   rpc: DecoratedRpc<'rxjs', RpcInterface>;

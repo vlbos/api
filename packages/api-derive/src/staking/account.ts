@@ -1,4 +1,4 @@
-// Copyright 2017-2020 @polkadot/api-derive authors & contributors
+// Copyright 2017-2021 @polkadot/api-derive authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import type { ApiInterfaceRx } from '@polkadot/api/types';
@@ -6,11 +6,19 @@ import type { Balance, StakingLedger, UnlockChunk } from '@polkadot/types/interf
 import type { DeriveSessionInfo, DeriveStakingAccount, DeriveStakingKeys, DeriveStakingQuery, DeriveUnlocking } from '../types';
 
 import BN from 'bn.js';
-import { combineLatest, Observable } from 'rxjs';
-import { map, switchMap } from 'rxjs/operators';
+
 import { BN_ZERO } from '@polkadot/util';
+import { combineLatest, Observable } from '@polkadot/x-rxjs';
+import { map, switchMap } from '@polkadot/x-rxjs/operators';
 
 import { memo } from '../util';
+
+const QUERY_OPTS = {
+  withDestination: true,
+  withLedger: true,
+  withNominations: true,
+  withPrefs: true
+};
 
 function groupByEra (list: UnlockChunk[]): Record<string, BN> {
   return list.reduce((map: Record<string, BN>, { era, value }): Record<string, BN> => {
@@ -63,7 +71,7 @@ export function accounts (instanceId: string, api: ApiInterfaceRx): (accountIds:
       switchMap((sessionInfo) =>
         combineLatest([
           api.derive.staking.keysMulti(accountIds),
-          api.derive.staking.queryMulti(accountIds)
+          api.derive.staking.queryMulti(accountIds, QUERY_OPTS)
         ]).pipe(
           map(([keys, queries]) => queries.map((query, index) => parseResult(api, sessionInfo, keys[index], query)))
         )

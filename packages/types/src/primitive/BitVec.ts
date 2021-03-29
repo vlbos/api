@@ -1,4 +1,4 @@
-// Copyright 2017-2020 @polkadot/types authors & contributors
+// Copyright 2017-2021 @polkadot/types authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import type { AnyU8a, Registry } from '../types';
@@ -47,6 +47,10 @@ export class BitVec extends Raw {
    */
   public get encodedLength (): number {
     return this.length + compactToU8a(this.bitLength()).length;
+  }
+
+  public toHuman (): string {
+    return `0b${[...this.toU8a(true)].map((d) => `00000000${d.toString(2)}`.slice(-8)).join('_')}`;
   }
 
   /**

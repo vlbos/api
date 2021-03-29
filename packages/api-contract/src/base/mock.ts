@@ -1,4 +1,4 @@
-// Copyright 2017-2020 @polkadot/api-contract authors & contributors
+// Copyright 2017-2021 @polkadot/api-contract authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import { ApiBase } from '@polkadot/api/base';
@@ -11,6 +11,9 @@ export const mockApi = {
   rx: {
     tx: {
       contracts: {
+        instantiate: (): never => {
+          throw new Error('mock');
+        },
         putCode: (): never => {
           throw new Error('mock');
         }

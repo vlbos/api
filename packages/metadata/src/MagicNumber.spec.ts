@@ -1,9 +1,9 @@
-// Copyright 2017-2020 @polkadot/metadata authors & contributors
+// Copyright 2017-2021 @polkadot/metadata authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import { TypeRegistry } from '@polkadot/types/create';
 
-import { MagicNumber, MAGIC_NUMBER } from './MagicNumber';
+import { MAGIC_NUMBER, MagicNumber } from './MagicNumber';
 
 describe('MagicNumber', (): void => {
   const registry = new TypeRegistry();

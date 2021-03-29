@@ -1,18 +1,18 @@
-// Copyright 2017-2020 @polkadot/api-derive authors & contributors
+// Copyright 2017-2021 @polkadot/api-derive authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import type { Observable } from 'rxjs';
 import type { ApiInterfaceRx } from '@polkadot/api/types';
 import type { Option, u64 } from '@polkadot/types';
 import type { SessionIndex } from '@polkadot/types/interfaces';
+import type { Observable } from '@polkadot/x-rxjs';
 import type { DeriveSessionInfo, DeriveSessionProgress } from '../types';
 
-import { combineLatest, of } from 'rxjs';
-import { map, switchMap } from 'rxjs/operators';
-import { isFunction } from '@polkadot/util';
+import { combineLatest, of } from '@polkadot/x-rxjs';
+import { map, switchMap } from '@polkadot/x-rxjs/operators';
 
 import { memo } from '../util';
 
+type ResultSlotsNoSession = [u64, u64, u64];
 type ResultSlots = [u64, u64, u64, Option<SessionIndex>];
 type ResultSlotsFlat = [u64, u64, u64, SessionIndex];
 
@@ -40,33 +40,28 @@ function queryAura (api: ApiInterfaceRx): Observable<DeriveSessionProgress> {
 
 function queryBabe (api: ApiInterfaceRx): Observable<[DeriveSessionInfo, ResultSlotsFlat]> {
   return api.derive.session.info().pipe(
-    switchMap((info): Observable<[DeriveSessionInfo, ResultSlots]> =>
+    switchMap((info): Observable<[DeriveSessionInfo, ResultSlots | ResultSlotsNoSession]> =>
       combineLatest([
         of(info),
-        api.queryMulti<ResultSlots>([
-          api.query.babe.currentSlot,
-          api.query.babe.epochIndex,
-          api.query.babe.genesisSlot,
-          [api.query.staking.erasStartSessionIndex, info.activeEra]
-        ])
+        // we may have no staking, but have babe (permissioned)
+        api.query.staking
+          ? api.queryMulti<ResultSlots>([
+            api.query.babe.currentSlot,
+            api.query.babe.epochIndex,
+            api.query.babe.genesisSlot,
+            [api.query.staking.erasStartSessionIndex, info.activeEra]
+          ])
+          : api.queryMulti<ResultSlotsNoSession>([
+            api.query.babe.currentSlot,
+            api.query.babe.epochIndex,
+            api.query.babe.genesisSlot
+          ])
       ])
     ),
     map(([info, [currentSlot, epochIndex, genesisSlot, optStartIndex]]): [DeriveSessionInfo, ResultSlotsFlat] => [
-      info, [currentSlot, epochIndex, genesisSlot, optStartIndex.unwrapOr(api.registry.createType('SessionIndex', 1))]
+      info, [currentSlot, epochIndex, genesisSlot, optStartIndex && optStartIndex.isSome ? optStartIndex.unwrap() : api.registry.createType('SessionIndex', 1)]
     ])
   );
-}
-
-function queryBabeNoHistory (api: ApiInterfaceRx): Observable<[DeriveSessionInfo, ResultSlotsFlat]> {
-  return combineLatest([
-    api.derive.session.info(),
-    api.queryMulti<ResultSlotsFlat>([
-      api.query.babe.currentSlot,
-      api.query.babe.epochIndex,
-      api.query.babe.genesisSlot,
-      api.query.staking.currentEraStartSessionIndex
-    ])
-  ]);
 }
 
 /**
@@ -75,11 +70,7 @@ function queryBabeNoHistory (api: ApiInterfaceRx): Observable<[DeriveSessionInfo
 export function progress (instanceId: string, api: ApiInterfaceRx): () => Observable<DeriveSessionProgress> {
   return memo(instanceId, (): Observable<DeriveSessionProgress> =>
     api.consts.babe
-      ? (
-        isFunction(api.query.staking.erasStartSessionIndex)
-          ? queryBabe(api) // 2.x with Babe
-          : queryBabeNoHistory(api)
-      ).pipe(
+      ? queryBabe(api).pipe(
         map(([info, slots]: [DeriveSessionInfo, ResultSlotsFlat]): DeriveSessionProgress =>
           createDerive(api, info, slots)
         )

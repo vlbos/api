@@ -1,4 +1,4 @@
-// Copyright 2017-2020 @polkadot/types authors & contributors
+// Copyright 2017-2021 @polkadot/types authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 // order important in structs... :)
@@ -6,7 +6,7 @@
 
 import type { Definitions } from '../../types';
 
-const AllHashers = {
+export const AllHashers = {
   Blake2_128: null, // eslint-disable-line camelcase
   Blake2_256: null, // eslint-disable-line camelcase
   Blake2_128Concat: null, // eslint-disable-line camelcase
@@ -16,8 +16,6 @@ const AllHashers = {
   // new in v11
   Identity: null
 };
-
-export { AllHashers };
 
 export default {
   rpc: {},
@@ -250,6 +248,7 @@ export default {
 
     // This always maps to the latest
     DoubleMapTypeLatest: 'DoubleMapTypeV12',
+    ErrorMetadataLatest: 'ErrorMetadataV12',
     EventMetadataLatest: 'EventMetadataV12',
     ExtrinsicMetadataLatest: 'ExtrinsicMetadataV12',
     FunctionArgumentMetadataLatest: 'FunctionArgumentMetadataV12',

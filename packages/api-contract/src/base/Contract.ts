@@ -1,19 +1,20 @@
-// Copyright 2017-2020 @polkadot/api-contract authors & contributors
+// Copyright 2017-2021 @polkadot/api-contract authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import type { ApiTypes, DecorateMethod } from '@polkadot/api/types';
 import type { SubmittableExtrinsic } from '@polkadot/api/submittable/types';
+import type { ApiTypes, DecorateMethod } from '@polkadot/api/types';
 import type { Bytes } from '@polkadot/types';
-import type { AccountId, ContractExecResult, EventRecord } from '@polkadot/types/interfaces';
+import type { AccountId, ContractExecResult, EventRecord, Weight } from '@polkadot/types/interfaces';
 import type { AnyJson, CodecArg, ISubmittableResult, Registry } from '@polkadot/types/types';
 import type { AbiMessage, ContractCallOutcome, ContractOptions, DecodedEvent } from '../types';
 import type { ContractCallResult, ContractCallSend, ContractGeneric, ContractQuery, ContractTx, MapMessageQuery, MapMessageTx } from './types';
 
 import BN from 'bn.js';
-import { map } from 'rxjs/operators';
+
 import { SubmittableResult } from '@polkadot/api';
 import { ApiBase } from '@polkadot/api/base';
 import { assert, bnToBn, isFunction, isUndefined, logger, stringCamelCase } from '@polkadot/util';
+import { map } from '@polkadot/x-rxjs/operators';
 
 import { Abi } from '../Abi';
 import { applyOnEvent, extractOptions, formatData, isOptions } from '../util';
@@ -22,6 +23,7 @@ import { Base } from './Base';
 // As per Rust, 5 * GAS_PER_SEC
 const MAX_CALL_GAS = new BN(5_000_000_000_000).subn(1);
 const ERROR_NO_CALL = 'Your node does not expose the contracts.call RPC. This is most probably due to a runtime configuration.';
+
 const l = logger('Contract');
 
 function createQuery <ApiType extends ApiTypes> (fn: (origin: string | AccountId | Uint8Array, options: ContractOptions, params: CodecArg[]) => ContractCallResult<ApiType, ContractCallOutcome>): ContractQuery<ApiType> {
@@ -38,11 +40,14 @@ function createTx <ApiType extends ApiTypes> (fn: (options: ContractOptions, par
       : fn(...extractOptions(options, params));
 }
 
-function createWithId <T> (fn: (messageOrId: AbiMessage | string | number, options: ContractOptions, params: CodecArg[]) => T): ContractGeneric<ContractOptions, T> {
-  return (messageOrId: AbiMessage | string | number, options: BigInt | string | number | BN | ContractOptions, ...params: CodecArg[]): T =>
-    isOptions(options)
+function createWithId <T> (fn: (messageOrId: AbiMessage | string | number, options: ContractOptions, params: CodecArg[]) => T, warn?: string): ContractGeneric<ContractOptions, T> {
+  return (messageOrId: AbiMessage | string | number, options: BigInt | string | number | BN | ContractOptions, ...params: CodecArg[]): T => {
+    warn && l.warn(warn);
+
+    return isOptions(options)
       ? fn(messageOrId, options, params)
       : fn(messageOrId, ...extractOptions(options, params));
+  };
 }
 
 export class ContractSubmittableResult extends SubmittableResult {
@@ -108,8 +113,8 @@ export class Contract<ApiType extends ApiTypes> extends Base<ApiType> {
     super(api, abi, decorateMethod);
 
     this.address = this.registry.createType('AccountId', address);
-    this.exec = createWithId(this.#exec);
-    this.read = createWithId(this.#read);
+    this.exec = createWithId(this.#exec, '.exec is deprecated, use contract.tx.<messageName>(...) instead (where contract refers to this instance)');
+    this.read = createWithId(this.#read, '.read is deprecated, use contract.query.<messageName>(...) instead (where contract refers to this instance)');
 
     this.abi.messages.forEach((m): void => {
       const messageName = stringCamelCase(m.identifier);
@@ -144,7 +149,10 @@ export class Contract<ApiType extends ApiTypes> extends Base<ApiType> {
     return gasLimit.lten(0)
       ? isCall
         ? MAX_CALL_GAS
-        : this.api.consts.system.maximumBlockWeight.muln(64).divn(100)
+        : (this.api.consts.system.blockWeights
+          ? this.api.consts.system.blockWeights.maxBlock
+          : this.api.consts.system.maximumBlockWeight as Weight
+        ).muln(64).divn(100)
       : gasLimit;
   }
 
@@ -152,7 +160,8 @@ export class Contract<ApiType extends ApiTypes> extends Base<ApiType> {
     return this.api.tx.contracts
       .call(this.address, value, this.#getGas(gasLimit), this.abi.findMessage(messageOrId).toU8a(params))
       .withResultTransform((result: ISubmittableResult) =>
-        new ContractSubmittableResult(result, applyOnEvent(result, 'ContractExecution', (records: EventRecord[]) =>
+        // ContractEmitted is the current generation, ContractExecution is the previous generation
+        new ContractSubmittableResult(result, applyOnEvent(result, ['ContractEmitted', 'ContractExecution'], (records: EventRecord[]) =>
           records
             .map(({ event: { data: [, data] } }): DecodedEvent | null => {
               try {

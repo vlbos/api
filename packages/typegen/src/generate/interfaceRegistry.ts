@@ -1,4 +1,4 @@
-// Copyright 2017-2020 @polkadot/typegen authors & contributors
+// Copyright 2017-2021 @polkadot/typegen authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import Handlebars from 'handlebars';
@@ -72,7 +72,7 @@ export function generateInterfaceTypes (importDefinitions: { [importPath: string
     return generateInterfaceTypesTemplate({
       headerType: 'defs',
       imports,
-      items,
+      items: items.sort((a, b) => a.localeCompare(b)),
       types
     });
   });

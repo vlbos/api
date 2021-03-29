@@ -1,13 +1,12 @@
 {
   "name": "@polkadot/api-derive",
-  "version": "2.9.2-2",
+  "version": "4.2.2-4",
+  "type": "module",
   "description": "Common functions used across Polkadot, derived from RPC calls and storage queries.",
   "main": "index.js",
-  "sideEffects": false,
-  "keywords": [
-    "Polkadot",
-    "Promise",
-    "RxJs"
+  "sideEffects": [
+    "./detectPackage.js",
+    "./detectPackage.cjs"
   ],
   "author": "Jaco Greeff <jacogr@gmail.com>",
   "maintainers": [],
@@ -17,18 +16,17 @@
   "bugs": "https://github.com/polkadot-js/api/issues",
   "homepage": "https://github.com/polkadot-js/api/tree/master/packages/api-derive#readme",
   "dependencies": {
-    "@babel/runtime": "^7.12.5",
-    "@polkadot/api": "2.9.2-2",
-    "@polkadot/rpc-core": "2.9.2-2",
-    "@polkadot/types": "2.9.2-2",
-    "@polkadot/util": "^4.2.1",
-    "@polkadot/util-crypto": "^4.2.1",
-    "bn.js": "^4.11.9",
-    "memoizee": "^0.4.14",
-    "rxjs": "^6.6.3"
+    "@babel/runtime": "^7.13.10",
+    "@polkadot/api": "4.2.2-4",
+    "@polkadot/rpc-core": "4.2.2-4",
+    "@polkadot/types": "4.2.2-4",
+    "@polkadot/util": "^6.0.5",
+    "@polkadot/util-crypto": "^6.0.5",
+    "@polkadot/x-rxjs": "^6.0.5",
+    "bn.js": "^4.11.9"
   },
   "devDependencies": {
-    "@polkadot/keyring": "^4.2.1",
-    "@polkadot/rpc-provider": "2.9.2-2"
+    "@polkadot/keyring": "^6.0.5",
+    "@polkadot/rpc-provider": "4.2.2-4"
   }
 }

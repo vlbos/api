@@ -1,16 +1,16 @@
-// Copyright 2017-2020 @polkadot/api-derive authors & contributors
+// Copyright 2017-2021 @polkadot/api-derive authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import type { Observable } from 'rxjs';
+import type { ApiInterfaceRx } from '@polkadot/api/types';
 import type { Header, Index } from '@polkadot/types/interfaces';
 import type { AnyNumber, Codec, IExtrinsicEra } from '@polkadot/types/types';
+import type { Observable } from '@polkadot/x-rxjs';
 
-import { combineLatest, of } from 'rxjs';
-import { map, switchMap } from 'rxjs/operators';
-import { ApiInterfaceRx } from '@polkadot/api/types';
 import { isNumber, isUndefined } from '@polkadot/util';
+import { combineLatest, of } from '@polkadot/x-rxjs';
+import { map, switchMap } from '@polkadot/x-rxjs/operators';
 
-import { FALLBACK_PERIOD, MAX_FINALITY_LAG, MORTAL_PERIOD } from './constants';
+import { FALLBACK_MAX_HASH_COUNT, FALLBACK_PERIOD, MAX_FINALITY_LAG, MORTAL_PERIOD } from './constants';
 
 interface Result {
   header: Header | null;
@@ -33,10 +33,19 @@ function nextNonce (api: ApiInterfaceRx, address: string): Observable<Index> {
 function signingHeader (api: ApiInterfaceRx): Observable<Header> {
   return combineLatest([
     api.rpc.chain.getHeader(),
-    api.rpc.chain.getFinalizedHead().pipe(
-      switchMap((hash) => api.rpc.chain.getHeader(hash))
-    )
+    api.rpc.chain.getFinalizedHead()
   ]).pipe(
+    switchMap(([bestHeader, finHash]) =>
+      // retrieve the headers - in the case of the current block, we use the parent
+      // to minimize (not completely remove) the impact that forks do have on the system
+      // (when at genesis, just return the current header as the last known)
+      bestHeader.parentHash.isEmpty
+        ? of([bestHeader, bestHeader])
+        : combineLatest([
+          api.rpc.chain.getHeader(bestHeader.parentHash),
+          api.rpc.chain.getHeader(finHash)
+        ])
+    ),
     map(([current, finalized]) =>
       // determine the hash to use, current when lag > max, else finalized
       current.number.unwrap().sub(finalized.number.unwrap()).gt(MAX_FINALITY_LAG)
@@ -63,10 +72,13 @@ export function signingInfo (_instanceId: string, api: ApiInterfaceRx): (address
     ]).pipe(
       map(([nonce, header]) => ({
         header,
-        mortalLength: MORTAL_PERIOD
-          .div(api.consts.babe?.expectedBlockTime || api.consts.timestamp?.minimumPeriod.muln(2) || FALLBACK_PERIOD)
-          .iadd(MAX_FINALITY_LAG)
-          .toNumber(),
+        mortalLength: Math.min(
+          api.consts.system?.blockHashCount?.toNumber() || FALLBACK_MAX_HASH_COUNT,
+          MORTAL_PERIOD
+            .div(api.consts.babe?.expectedBlockTime || api.consts.timestamp?.minimumPeriod.muln(2) || FALLBACK_PERIOD)
+            .iadd(MAX_FINALITY_LAG)
+            .toNumber()
+        ),
         nonce
       }))
     );

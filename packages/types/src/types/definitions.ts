@@ -1,4 +1,4 @@
-// Copyright 2017-2020 @polkadot/types authors & contributors
+// Copyright 2017-2021 @polkadot/types authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 export type DefinitionTypeType = string;
@@ -21,8 +21,10 @@ export interface DefinitionRpcParam {
 
 export interface DefinitionRpc {
   alias?: string[];
+  aliasSection?: string;
   description: string;
   endpoint?: string;
+  isSigned?: boolean;
   params: DefinitionRpcParam[];
   type: DefinitionTypeType;
 }
@@ -39,7 +41,11 @@ export interface DefinitionRpcSub extends DefinitionRpc {
   pubsub: [string, string, string];
 }
 
+export type DefinitionsRpc = Record<string, DefinitionRpc | DefinitionRpcSub>;
+
+export type DefinitionsTypes = Record<string, DefinitionType>;
+
 export interface Definitions {
-  rpc: Record<string, DefinitionRpc | DefinitionRpcSub>;
-  types: Record<string, DefinitionType>;
+  rpc: DefinitionsRpc;
+  types: DefinitionsTypes;
 }

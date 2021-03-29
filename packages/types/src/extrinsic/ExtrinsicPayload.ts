@@ -1,4 +1,4 @@
-// Copyright 2017-2020 @polkadot/types authors & contributors
+// Copyright 2017-2021 @polkadot/types authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import type { ExtrinsicPayloadV4 } from '../interfaces/extrinsics';
@@ -11,8 +11,8 @@ import { Base } from '../codec/Base';
 import { Compact } from '../codec/Compact';
 import { Raw } from '../codec/Raw';
 import { u32 } from '../primitive/U32';
-import { GenericExtrinsicEra } from './ExtrinsicEra';
 import { DEFAULT_VERSION } from './constants';
+import { GenericExtrinsicEra } from './ExtrinsicEra';
 
 interface ExtrinsicPayloadOptions {
   version?: number;
@@ -36,12 +36,12 @@ const VERSIONS: (keyof InterfaceTypes)[] = [
  * on the contents included
  */
 export class GenericExtrinsicPayload extends Base<ExtrinsicPayloadVx> {
-  constructor (registry: Registry, value: Partial<ExtrinsicPayloadValue> | Uint8Array | string | undefined, { version }: ExtrinsicPayloadOptions = {}) {
+  constructor (registry: Registry, value?: Partial<ExtrinsicPayloadValue> | Uint8Array | string, { version }: ExtrinsicPayloadOptions = {}) {
     super(registry, GenericExtrinsicPayload.decodeExtrinsicPayload(registry, value as ExtrinsicPayloadValue, version));
   }
 
   /** @internal */
-  public static decodeExtrinsicPayload (registry: Registry, value: GenericExtrinsicPayload | ExtrinsicPayloadValue | Uint8Array | string | undefined, version: number = DEFAULT_VERSION): ExtrinsicPayloadVx {
+  public static decodeExtrinsicPayload (registry: Registry, value?: GenericExtrinsicPayload | ExtrinsicPayloadValue | Uint8Array | string, version: number = DEFAULT_VERSION): ExtrinsicPayloadVx {
     if (value instanceof GenericExtrinsicPayload) {
       return value._raw;
     }

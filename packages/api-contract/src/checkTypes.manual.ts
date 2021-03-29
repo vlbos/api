@@ -1,10 +1,10 @@
-// Copyright 2017-2020 @polkadot/api-contract authors & contributors
+// Copyright 2017-2021 @polkadot/api-contract authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 // Simple non-runnable checks to test type definitions in the editor itself
 
 import { ApiPromise } from '@polkadot/api';
-import { TestKeyringMap, createTestPairs } from '@polkadot/keyring/testingPairs';
+import { createTestPairs, TestKeyringMap } from '@polkadot/keyring/testingPairs';
 
 import abiIncrementer from '../test/contracts/ink/incrementer.json';
 import { BlueprintPromise, ContractPromise } from '.';
@@ -37,7 +37,9 @@ async function checkContract (api: ApiPromise, pairs: TestKeyringMap): Promise<v
 }
 
 async function main (): Promise<void> {
-  const api = await ApiPromise.create();
+  const api = await ApiPromise.create({
+    hasher: (data: Uint8Array): Uint8Array => data
+  });
   const pairs = createTestPairs();
 
   // eslint-disable-next-line @typescript-eslint/no-floating-promises

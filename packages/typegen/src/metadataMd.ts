@@ -1,31 +1,36 @@
-// Copyright 2017-2020 @polkadot/typegen authors & contributors
+// Copyright 2017-2021 @polkadot/typegen authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import type { MetadataLatest } from '@polkadot/types/interfaces/metadata';
 import type { Codec, DefinitionRpcParam } from '@polkadot/types/types';
 
 import fs from 'fs';
+
 import { Metadata } from '@polkadot/metadata';
 import rpcdata from '@polkadot/metadata/static';
-import { GenericCall as Call } from '@polkadot/types/generic';
-import { unwrapStorageType } from '@polkadot/types/primitive/StorageKey';
-import { TypeRegistry } from '@polkadot/types/create';
 import { Vec } from '@polkadot/types/codec';
+import { TypeRegistry } from '@polkadot/types/create';
+import { GenericCall as Call } from '@polkadot/types/generic';
 import * as definitions from '@polkadot/types/interfaces/definitions';
 import { Text } from '@polkadot/types/primitive';
+import { unwrapStorageType } from '@polkadot/types/primitive/StorageKey';
 import { stringCamelCase, stringLowerFirst } from '@polkadot/util';
+
+interface Section {
+  link?: string;
+  name: string;
+  description?: string;
+  items: {
+    link?: string;
+    name: string;
+    [bullet: string]: undefined | string | Vec<Text>;
+  }[];
+}
 
 interface Page {
   title: string;
   description: string;
-  sections: {
-    name: string;
-    description?: string;
-    items: {
-      name: string;
-      [bullet: string]: string | Vec<Text>;
-    }[];
-  }[];
+  sections: Section[];
 }
 
 const STATIC_TEXT = '\n\n(NOTE: These were generated from a static/snapshot view of a recent Substrate master node. Some items may not be available in older nodes, or in any customized implementations.)';
@@ -70,16 +75,22 @@ function renderPage (page: Page): string {
 
   // contents
   page.sections.forEach((section) => {
-    md += `\n___\n\n\n## ${section.name}\n`;
+    md += '\n___\n\n\n';
+    md += section.link
+      ? `<h2 id="#${section.link}">${section.name}</h2>\n`
+      : `## ${section.name}\n`;
 
     if (section.description) {
       md += `\n_${section.description}_\n`;
     }
 
     section.items.forEach((item) => {
-      md += ` \n### ${item.name}`;
+      md += ' \n';
+      md += item.link
+        ? `<h3 id="#${item.link}">${item.name}</h3>`
+        : `### ${item.name}`;
 
-      Object.keys(item).filter((i) => i !== 'name').forEach((bullet) => {
+      Object.keys(item).filter((key) => !['link', 'name'].includes(key)).forEach((bullet) => {
         md += `\n- **${bullet}**: ${
           // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
           item[bullet] instanceof Vec
@@ -111,31 +122,41 @@ function addRpc (): string {
     description: DESC_RPC,
     sections: sections
       .sort()
-      .map((sectionName) => {
-        const section = definitions[sectionName as 'babe'];
+      .reduce((all: Section[], _sectionName): Section[] => {
+        const section = definitions[_sectionName as 'babe'];
 
-        return {
-          // description: section.description,
-          items: Object.keys(section.rpc)
-            .sort()
-            .map((methodName) => {
-              const method = section.rpc[methodName];
-              const args = method.params.map(({ isOptional, name, type }: DefinitionRpcParam): string => {
-                // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
-                return name + (isOptional ? '?' : '') + ': `' + type + '`';
-              }).join(', ');
-              const type = '`' + method.type + '`';
+        Object.keys(section.rpc)
+          .sort()
+          .forEach((methodName) => {
+            const method = section.rpc[methodName];
+            const sectionName = method.aliasSection || _sectionName;
+            const topName = method.aliasSection ? `${_sectionName}/${method.aliasSection}` : _sectionName;
+            let container = all.find(({ name }) => name === topName);
 
-              return {
-                interface: '`' + `api.rpc.${sectionName}.${methodName}` + '`',
-                jsonrpc: '`' + (method.endpoint || `${sectionName}_${methodName}`) + '`',
-                name: `${methodName}(${args}): ${type}`,
-                ...(method.description && { summary: method.description })
-              };
-            }),
-          name: sectionName
-        };
-      }),
+            if (!container) {
+              container = { items: [], name: topName };
+
+              all.push(container);
+            }
+
+            const args = method.params.map(({ isOptional, name, type }: DefinitionRpcParam): string => {
+              // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
+              return name + (isOptional ? '?' : '') + ': `' + type + '`';
+            }).join(', ');
+            const type = '`' + method.type + '`';
+            const jsonrpc = (method.endpoint || `${sectionName}_${methodName}`);
+
+            container.items.push({
+              interface: '`' + `api.rpc.${sectionName}.${methodName}` + '`',
+              jsonrpc: '`' + jsonrpc + '`',
+              // link: jsonrpc,
+              name: `${methodName}(${args}): ${type}`,
+              ...(method.description && { summary: method.description })
+            });
+          });
+
+        return all;
+      }, []).sort((a, b) => a.name.localeCompare(b.name)),
     title: 'JSON-RPC'
   });
 }
@@ -254,6 +275,7 @@ function addEvents (metadata: MetadataLatest): string {
             const args = func.args.map((type): string => '`' + type.toString() + '`').join(', ');
 
             return {
+              interface: '`' + `api.events.${stringCamelCase(meta.name)}.${methodName}.is` + '`',
               name: `${methodName}(${args})`,
               ...(func.documentation.length && { summary: func.documentation })
             };
@@ -275,6 +297,7 @@ function addErrors (metadata: MetadataLatest): string {
         items: moduleMetadata.errors
           .sort(sortByName)
           .map((error) => ({
+            interface: '`' + `api.errors.${stringCamelCase(moduleMetadata.name)}.${error.name.toString()}.is` + '`',
             name: error.name.toString(),
             ...(error.documentation.length && { summary: error.documentation })
           })),

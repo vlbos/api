@@ -1,4 +1,4 @@
-// Copyright 2017-2020 @polkadot/types-known authors & contributors
+// Copyright 2017-2021 @polkadot/types-known authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 /* eslint-disable sort-keys */
@@ -9,30 +9,31 @@ import type { OverrideVersionedType } from '@polkadot/types/types';
 /* eslint-disable sort-keys */
 
 const sharedTypes = {
-  Address: 'AccountId',
-  Keys: 'SessionKeys5',
-  LookupSource: 'AccountId'
+  FullIdentification: '()', // No staking, only session (as per config)
+  Keys: 'SessionKeys6'
 };
 
 const versioned: OverrideVersionedType[] = [
   {
-    minmax: [0, 9],
+    minmax: [0, 200],
     types: {
       ...sharedTypes,
-      CompactAssignments: 'CompactAssignmentsTo257',
-      RefCount: 'RefCountTo259',
-      RewardDestination: 'RewardDestinationTo257'
+      AccountInfo: 'AccountInfoWithDualRefCount',
+      Address: 'AccountId',
+      LookupSource: 'AccountId'
     }
   },
   {
-    minmax: [10, undefined],
+    minmax: [201, 214],
     types: {
       ...sharedTypes,
-      ParaGenesisArgs: {
-        genesisHead: 'Bytes',
-        validationCode: 'Bytes',
-        parachain: 'bool'
-      }
+      AccountInfo: 'AccountInfoWithDualRefCount'
+    }
+  },
+  {
+    minmax: [215, undefined],
+    types: {
+      ...sharedTypes
     }
   }
 ];

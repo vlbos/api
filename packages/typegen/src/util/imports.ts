@@ -1,10 +1,9 @@
-// Copyright 2017-2020 @polkadot/typegen authors & contributors
+// Copyright 2017-2021 @polkadot/typegen authors & contributors
 // SPDX-License-Identifier: Apache-2.0
-
-import { TypeDefInfo } from '@polkadot/types/create/types';
 
 import * as codecClasses from '@polkadot/types/codec';
 import { getTypeDef } from '@polkadot/types/create';
+import { TypeDefInfo } from '@polkadot/types/create/types';
 import * as extrinsicClasses from '@polkadot/types/extrinsic';
 import * as genericClasses from '@polkadot/types/generic';
 import * as primitiveClasses from '@polkadot/types/primitive';
@@ -71,8 +70,8 @@ export function setImports (allDefs: Record<string, ModuleTypes>, imports: TypeI
         setImports(allDefs, imports, [typeDef.sub.type]);
       }
     } else if (type.includes('[') && type.includes('|')) {
-      // We split the types
-      const splitTypes = /\[\s?(.+?)\s?\]/.exec(type)![1].split(/\s?\|\s?/);
+      // We split the types (we already dod the check above, so safe-path should not be caught)
+      const splitTypes = (/\[\s?(.+?)\s?\]/.exec(type) || ['', ''])[1].split(/\s?\|\s?/);
 
       setImports(allDefs, imports, splitTypes);
     } else {

@@ -1,4 +1,4 @@
-// Copyright 2017-2020 @polkadot/types authors & contributors
+// Copyright 2017-2021 @polkadot/types authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 // order important in structs... :)
@@ -29,7 +29,7 @@ export default {
     AccountId: 'GenericAccountId',
     AccountIdOf: 'AccountId',
     AccountIndex: 'GenericAccountIndex',
-    Address: 'LookupSource',
+    Address: 'MultiAddress',
     AssetId: 'u32',
     Balance: 'UInt<128, Balance>',
     BalanceOf: 'Balance',
@@ -43,6 +43,7 @@ export default {
       digestLevels: 'u32'
     },
     ConsensusEngineId: 'GenericConsensusEngineId',
+    CodecHash: 'Hash',
     Digest: {
       logs: 'Vec<DigestItem>'
     },
@@ -61,9 +62,13 @@ export default {
       normal: 'Weight',
       operational: 'Weight'
     },
+    H64: '[u8; 8; H64]',
+    H128: '[u8; 16; H64]',
     H160: '[u8; 20; H160]',
     H256: '[u8; 32; H256]',
     H512: '[u8; 64; H512]',
+    H1024: '[u8; 128; H1024]',
+    H2048: '[u8; 256; H2048]',
     Hash: 'H256',
     Header: {
       parentHash: 'Hash',
@@ -74,15 +79,24 @@ export default {
     },
     IndicesLookupSource: 'GenericLookupSource',
     Index: 'u32',
-    Justification: 'Bytes',
+    Justification: '(ConsensusEngineId, EncodedJustification)',
+    EncodedJustification: 'Bytes',
+    Justifications: 'Vec<Justification>',
     KeyValue: '(StorageKey, StorageData)',
     KeyTypeId: 'u32',
     LockIdentifier: '[u8; 8]',
-    LookupSource: 'IndicesLookupSource',
+    LookupSource: 'MultiAddress',
     LookupTarget: 'AccountId',
     ModuleId: 'LockIdentifier',
     MultiAddress: 'GenericMultiAddress',
-    Moment: 'u64',
+    MultiSigner: {
+      _enum: {
+        Ed25519: '[u8; 32]',
+        Sr25519: '[u8; 32]',
+        Ecdsa: '[u8; 33]'
+      }
+    },
+    Moment: 'UInt<64, Moment>',
     OpaqueCall: 'Bytes',
     Origin: 'DoNotConstruct<Origin>',
     OriginCaller: {
@@ -109,13 +123,23 @@ export default {
       read: 'Weight',
       write: 'Weight'
     },
-    SignedBlock: {
+    SignedBlock: 'SignedBlockWithJustifications',
+    SignedBlockWithJustification: {
       block: 'Block',
-      justification: 'Justification'
+      justification: 'Option<EncodedJustification>'
     },
+    SignedBlockWithJustifications: {
+      block: 'Block',
+      justifications: 'Option<Justifications>'
+    },
+    Slot: 'u64',
     StorageData: 'Bytes',
+    StorageProof: {
+      trieNodes: 'Vec<Bytes>'
+    },
     TransactionPriority: 'u64',
     ValidatorId: 'AccountId',
+    ValidatorIdOf: 'ValidatorId',
     Weight: 'u64',
     WeightMultiplier: 'Fixed64',
 

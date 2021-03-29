@@ -1,7 +1,7 @@
-// Copyright 2017-2020 @polkadot/types authors & contributors
+// Copyright 2017-2021 @polkadot/types authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import type { UIntBitLength, U8aBitLength } from '../codec/types';
+import type { U8aBitLength, UIntBitLength } from '../codec/types';
 import type { Codec, Constructor, InterfaceTypes, Registry } from '../types';
 import type { FromReg, TypeDef } from './types';
 
@@ -87,7 +87,19 @@ const infoMapping: Record<TypeDefInfo, (registry: Registry, value: TypeDef) => C
 
   [TypeDefInfo.DoNotConstruct]: (registry: Registry, value: TypeDef): Constructor => DoNotConstruct.with(value.displayName),
 
-  [TypeDefInfo.Enum]: (registry: Registry, value: TypeDef): Constructor => Enum.with(getTypeClassMap(value)),
+  [TypeDefInfo.Enum]: (registry: Registry, value: TypeDef): Constructor => {
+    const subs = getSubDefArray(value);
+
+    return Enum.with(
+      subs.every(({ type }) => type === 'Null')
+        ? subs.reduce((out: Record<string, number>, { index, name }, count): Record<string, number> => {
+          out[name as string] = index || count;
+
+          return out;
+        }, {})
+        : getTypeClassMap(value)
+    );
+  },
 
   [TypeDefInfo.HashMap]: (registry: Registry, value: TypeDef): Constructor => createHashMap(value, HashMap),
 
@@ -117,10 +129,10 @@ const infoMapping: Record<TypeDefInfo, (registry: Registry, value: TypeDef) => C
     registry.getOrUnknown(value.type),
 
   [TypeDefInfo.Result]: (registry: Registry, value: TypeDef): Constructor => {
-    const [Ok, Error] = getTypeClassArray(value);
+    const [Ok, Err] = getTypeClassArray(value);
 
     // eslint-disable-next-line @typescript-eslint/no-use-before-define
-    return Result.with({ Error, Ok });
+    return Result.with({ Err, Ok });
   },
 
   [TypeDefInfo.Set]: (registry: Registry, value: TypeDef): Constructor => {

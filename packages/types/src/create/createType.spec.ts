@@ -1,4 +1,4 @@
-// Copyright 2017-2020 @polkadot/types authors & contributors
+// Copyright 2017-2021 @polkadot/types authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import { CodecSet, Int } from '../codec';
@@ -33,7 +33,7 @@ describe('createType', (): void => {
     }]);
 
     expect(struct.toJSON()).toEqual({
-      balance: 1234,
+      balance: 1234, // '0x000000000000000000000000000004d2',
       index: 16
     });
     expect(struct.toRawType()).toEqual(raw);
@@ -57,16 +57,22 @@ describe('createType', (): void => {
     ).toEqual('B');
   });
 
-  it('allows creation of a Enum (parametrised)', (): void => {
+  it('allows creation of a Enum (with types)', (): void => {
     expect(
       createTypeUnsafe(registry, '{"_enum": {"A": null, "B": "u32", "C": null} }', [1]).toJSON()
-    ).toEqual({ B: 0 });
+    ).toEqual({ b: 0 });
+  });
+
+  it('allows creation of a Enum (with indexes)', (): void => {
+    expect(
+      createTypeUnsafe(registry, '{"_enum": {"A": 42, "B": 69, "C": 255} }', [69]).toJSON()
+    ).toEqual('B');
   });
 
   it('allows creation of a Result', (): void => {
     expect(
       createTypeUnsafe(registry, 'Result<u32,Text>', ['0x011064656667']).toJSON()
-    ).toEqual({ Error: 'defg' });
+    ).toEqual({ err: 'defg' });
   });
 
   it('allows creation of a Set', (): void => {
@@ -78,7 +84,10 @@ describe('createType', (): void => {
   it('allows creation of a Tuple', (): void => {
     expect(
       createTypeUnsafe(registry, '(Balance,u32)', [[1234, 5678]]).toJSON()
-    ).toEqual([1234, 5678]);
+    ).toEqual([
+      1234, // '0x000000000000000000000000000004d2',
+      5678
+    ]);
   });
 
   it('allows creation for a UInt<bitLength>', (): void => {

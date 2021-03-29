@@ -1,8 +1,9 @@
-// Copyright 2017-2020 @polkadot/typegen authors & contributors
+// Copyright 2017-2021 @polkadot/typegen authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import path from 'path';
 import yargs from 'yargs';
+
 import * as substrateDefs from '@polkadot/types/interfaces/definitions';
 
 import { generateInterfaceTypes } from './generate/interfaceRegistry';

@@ -1,14 +1,15 @@
-// Copyright 2017-2020 @polkadot/metadata authors & contributors
+// Copyright 2017-2021 @polkadot/metadata authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import type { FunctionArgumentMetadataLatest, FunctionMetadataLatest } from '../interfaces/metadata';
-import type { AnyJson, AnyU8a, ArgsDef, CallFunction, Codec, IMethod, Registry } from '../types';
+import type { AnyJson, AnyTuple, AnyU8a, ArgsDef, CallBase, CallFunction, IMethod, Registry } from '../types';
 
 import { isHex, isObject, isU8a, u8aToU8a } from '@polkadot/util';
 
-import { getTypeDef, getTypeClass } from '../create';
 import { Struct } from '../codec/Struct';
 import { U8aFixed } from '../codec/U8aFixed';
+import { getTypeClass } from '../create/createClass';
+import { getTypeDef } from '../create/getTypeDef';
 
 interface DecodeMethodInput {
   args: unknown;
@@ -116,7 +117,7 @@ export class GenericCallIndex extends U8aFixed {
  * @description
  * Extrinsic function descriptor
  */
-export class GenericCall extends Struct implements IMethod {
+export class GenericCall<A extends AnyTuple = AnyTuple> extends Struct implements CallBase<A> {
   protected _meta: FunctionMetadataLatest;
 
   constructor (registry: Registry, value: unknown, meta?: FunctionMetadataLatest) {
@@ -158,9 +159,9 @@ export class GenericCall extends Struct implements IMethod {
   /**
    * @description The arguments for the function call
    */
-  public get args (): Codec[] {
+  public get args (): A {
     // FIXME This should return a Struct instead of an Array
-    return [...(this.get('args') as Struct).values()];
+    return [...(this.get('args') as Struct).values()] as A;
   }
 
   /**
@@ -185,15 +186,6 @@ export class GenericCall extends Struct implements IMethod {
   }
 
   /**
-   * @description `true` if the `Origin` type is on the method (extrinsic method)
-   */
-  public get hasOrigin (): boolean {
-    const firstArg = this.meta.args[0];
-
-    return !!firstArg && firstArg.type.toString() === 'Origin';
-  }
-
-  /**
    * @description The [[FunctionMetadata]]
    */
   public get meta (): FunctionMetadataLatest {
@@ -203,29 +195,22 @@ export class GenericCall extends Struct implements IMethod {
   /**
    * @description Returns the name of the method
    */
-  public get methodName (): string {
-    return this.registry.findMetaCall(this.callIndex).method;
-  }
-
-  /**
-   * @description Returns the name of the method
-   */
   public get method (): string {
-    return this.methodName;
-  }
-
-  /**
-   * @description Returns the module containing the method
-   */
-  public get sectionName (): string {
-    return this.registry.findMetaCall(this.callIndex).section;
+    return this.registry.findMetaCall(this.callIndex).method;
   }
 
   /**
    * @description Returns the module containing the method
    */
   public get section (): string {
-    return this.sectionName;
+    return this.registry.findMetaCall(this.callIndex).section;
+  }
+
+  /**
+   * @description Checks if the source matches this in type
+   */
+  public is (other: IMethod<AnyTuple>): other is IMethod<A> {
+    return other.callIndex[0] === this.callIndex[0] && other.callIndex[1] === this.callIndex[1];
   }
 
   /**

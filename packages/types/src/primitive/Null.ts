@@ -1,7 +1,7 @@
-// Copyright 2017-2020 @polkadot/types authors & contributors
+// Copyright 2017-2021 @polkadot/types authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import type { H256 } from '../interfaces/runtime';
+import type { CodecHash, Hash } from '../interfaces/runtime';
 import type { Codec, Registry } from '../types';
 
 import { isNull } from '@polkadot/util';
@@ -13,6 +13,8 @@ import { isNull } from '@polkadot/util';
  */
 export class Null implements Codec {
   public readonly registry: Registry;
+
+  public createdAtHash?: Hash;
 
   constructor (registry: Registry) {
     this.registry = registry;
@@ -28,7 +30,7 @@ export class Null implements Codec {
   /**
    * @description returns a hash of the contents
    */
-  public get hash (): H256 {
+  public get hash (): CodecHash {
     throw new Error('.hash is not implemented on Null');
   }
 

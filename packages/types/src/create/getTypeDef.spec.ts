@@ -1,8 +1,8 @@
-// Copyright 2017-2020 @polkadot/types authors & contributors
+// Copyright 2017-2021 @polkadot/types authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import { TypeDefInfo } from './types';
-import { TypeRegistry, getTypeDef } from '.';
+import { getTypeDef, TypeRegistry } from '.';
 
 describe('getTypeDef', (): void => {
   it('maps empty tuples to empty tuple', (): void => {

@@ -1,4 +1,4 @@
-// Copyright 2017-2020 @polkadot/types authors & contributors
+// Copyright 2017-2021 @polkadot/types authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 // order important in structs... :)
@@ -82,6 +82,7 @@ export default {
       type: 'Vec<PeerInfo>'
     },
     networkState: {
+      alias: ['system_unstable_networkState'],
       description: 'Returns current state of the network',
       params: [],
       type: 'NetworkState'
@@ -115,20 +116,55 @@ export default {
       description: 'Returns the state of the syncing of the node',
       params: [],
       type: 'SyncState'
+    },
+    addLogFilter: {
+      description: 'Adds the supplied directives to the current log filter',
+      params: [
+        {
+          name: 'directives',
+          type: 'Text'
+        }
+      ],
+      type: 'Null'
+    },
+    resetLogFilter: {
+      description: 'Resets the log filter to Substrate defaults',
+      params: [],
+      type: 'Null'
     }
   },
   types: {
-    AccountInfo: {
+    AccountInfo: 'AccountInfoWithTripleRefCount',
+    AccountInfoWithRefCount: {
       nonce: 'Index',
       refcount: 'RefCount',
       data: 'AccountData'
     },
-    ApplyExtrinsicResult: 'Result<DispatchOutcome, TransactionValidityError>',
-    ChainProperties: {
-      ss58Format: 'Option<u8>',
-      tokenDecimals: 'Option<u32>',
-      tokenSymbol: 'Option<Text>'
+    AccountInfoWithDualRefCount: {
+      nonce: 'Index',
+      consumers: 'RefCount',
+      providers: 'RefCount',
+      data: 'AccountData'
     },
+    // original naming
+    AccountInfoWithProviders: 'AccountInfoWithDualRefCount',
+    AccountInfoWithTripleRefCount: {
+      nonce: 'Index',
+      consumers: 'RefCount',
+      providers: 'RefCount',
+      sufficients: 'RefCount',
+      data: 'AccountData'
+    },
+    ApplyExtrinsicResult: 'Result<DispatchOutcome, TransactionValidityError>',
+    BlockLength: {
+      max: 'PerDispatchClassU32'
+    },
+    BlockWeights: {
+      baseBlock: 'Weight',
+      maxBlock: 'Weight',
+      perClass: 'PerDispatchClassWeightsPerClass'
+    },
+    ChainProperties: 'GenericChainProperties',
     ChainType: {
       _enum: {
         Development: 'Null',
@@ -137,6 +173,7 @@ export default {
         Custom: 'Text'
       }
     },
+    ConsumedWeight: 'PerDispatchClassWeight',
     DigestOf: 'Digest',
     DispatchClass: {
       _enum: ['Normal', 'Operational', 'Mandatory']
@@ -268,6 +305,21 @@ export default {
       bestHash: 'Hash',
       bestNumber: 'BlockNumber'
     },
+    PerDispatchClassU32: {
+      normal: 'u32',
+      operational: 'u32',
+      mandatory: 'u32'
+    },
+    PerDispatchClassWeight: {
+      normal: 'Weight',
+      operational: 'Weight',
+      mandatory: 'Weight'
+    },
+    PerDispatchClassWeightsPerClass: {
+      normal: 'WeightPerClass',
+      operational: 'WeightPerClass',
+      mandatory: 'WeightPerClass'
+    },
     Phase: {
       _enum: {
         ApplyExtrinsic: 'u32',
@@ -302,6 +354,12 @@ export default {
         NoUnsignedValidator: 'Null',
         Custom: 'u8'
       }
+    },
+    WeightPerClass: {
+      baseExtrinsic: 'Weight',
+      maxExtrinsic: 'Weight',
+      maxTotal: 'Option<Weight>',
+      reserved: 'Option<Weight>'
     }
   }
 } as Definitions;

@@ -1,4 +1,4 @@
-// Copyright 2017-2020 @polkadot/types authors & contributors
+// Copyright 2017-2021 @polkadot/types authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import type { TypeDef } from './types';
@@ -118,7 +118,7 @@ const encoders: Record<TypeDefInfo, (typeDef: TypeDef) => string> = {
   [TypeDefInfo.VecFixed]: (typeDef: TypeDef): string => encodeVecFixed(typeDef)
 };
 
-function encodeType (typeDef:TypeDef): string {
+function encodeType (typeDef: TypeDef): string {
   const encoder = encoders[typeDef.info];
 
   assert(encoder, `Cannot encode type: ${JSON.stringify(typeDef)}`);

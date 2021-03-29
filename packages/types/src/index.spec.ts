@@ -1,4 +1,4 @@
-// Copyright 2017-2020 @polkadot/types authors & contributors
+// Copyright 2017-2021 @polkadot/types authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import type { Codec } from './types';
@@ -6,9 +6,9 @@ import type { Codec } from './types';
 import { Metadata } from '@polkadot/metadata';
 import metadataStatic from '@polkadot/metadata/static';
 
+import * as definitions from './interfaces/definitions';
 import { createTypeUnsafe, TypeRegistry } from './create';
 import * as exported from './index.types';
-import * as definitions from './interfaces/definitions';
 
 // NOTE This is not a shortcut to implementing types incorrectly. This is here
 // specifically for the types that _should_ throw in the constrtuctor, i.e

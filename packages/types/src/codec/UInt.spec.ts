@@ -1,4 +1,4 @@
-// Copyright 2017-2020 @polkadot/types authors & contributors
+// Copyright 2017-2021 @polkadot/types authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import BN from 'bn.js';
@@ -45,6 +45,12 @@ describe('UInt', (): void => {
     ).toEqual(4567);
   });
 
+  it('has a working toBigInt', (): void => {
+    expect(
+      new UInt(registry, 4567).toBigInt() + BigInt(1)
+    ).toEqual(BigInt(4568));
+  });
+
   it('converts to Little Endian from the provided value', (): void => {
     expect(
       new UInt(registry, 1234567).toU8a()
@@ -73,8 +79,8 @@ describe('UInt', (): void => {
   });
 
   it('converts to JSON representation based on size', (): void => {
-    expect(new UInt(registry, '0x12345678', 64).toJSON()).toEqual(0x12345678);
-    expect(new UInt(registry, '0x1234567890', 64).toJSON()).toEqual(0x1234567890);
+    expect(new UInt(registry, '0x12345678', 32).toJSON()).toEqual(0x12345678);
+    expect(new UInt(registry, '0x1234567890', 64).toJSON()).toEqual(78187493520); // '0x0000001234567890');
     expect(new UInt(registry, '0x1234567890abcdef', 64).toJSON()).toEqual('0x1234567890abcdef');
   });
 

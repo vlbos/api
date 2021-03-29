@@ -1,4 +1,4 @@
-// Copyright 2017-2020 @polkadot/api authors & contributors
+// Copyright 2017-2021 @polkadot/api authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import type { ApiTypes, DecorateMethod } from '@polkadot/api/types';
@@ -26,6 +26,6 @@ export abstract class Base<ApiType extends ApiTypes> {
     this.registry = this.abi.registry;
     this._decorateMethod = decorateMethod;
 
-    assert(this.api.rx.tx.contracts && this.api.rx.tx.contracts.putCode, 'You need to connect to a node with the contracts module, the metadata does not enable api.tx.contracts on this instance');
+    assert(api.rx.tx.contracts?.instantiate, 'You need to connect to a node with the contracts module, the metadata does not enable api.tx.contracts on this instance');
   }
 }

@@ -1,11 +1,12 @@
-// Copyright 2017-2020 @polkadot/types authors & contributors
+// Copyright 2017-2021 @polkadot/types authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import type { H256 } from '../interfaces/runtime';
+import type { CodecHash, Hash } from '../interfaces/runtime';
 import type { AnyNumber, Codec, Registry } from '../types';
 import type { UIntBitLength } from './types';
 
 import BN from 'bn.js';
+
 import { bnToBn, bnToHex, bnToU8a, isString, isU8a, u8aToBn } from '@polkadot/util';
 
 const BITLENGTH: UIntBitLength = 64;
@@ -22,6 +23,8 @@ const BITLENGTH: UIntBitLength = 64;
  */
 export class CodecDate extends Date implements Codec {
   public readonly registry: Registry;
+
+  public createdAtHash?: Hash;
 
   constructor (registry: Registry, value: CodecDate | Date | AnyNumber = 0) {
     super(CodecDate.decodeDate(value));
@@ -54,7 +57,7 @@ export class CodecDate extends Date implements Codec {
   /**
    * @description returns a hash of the contents
    */
-  public get hash (): H256 {
+  public get hash (): CodecHash {
     return this.registry.hash(this.toU8a());
   }
 
@@ -82,7 +85,7 @@ export class CodecDate extends Date implements Codec {
   /**
    * @description Returns a BigInt representation of the number
    */
-  public toBigInt (): BigInt {
+  public toBigInt (): bigint {
     return BigInt(this.toNumber());
   }
 

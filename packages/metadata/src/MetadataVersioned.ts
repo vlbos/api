@@ -1,17 +1,17 @@
-// Copyright 2017-2020 @polkadot/metadata authors & contributors
+// Copyright 2017-2021 @polkadot/metadata authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import type { MetadataAll, MetadataLatest, MetadataV9, MetadataV10, MetadataV11, MetadataV12 } from '@polkadot/types/interfaces/metadata';
-import type { Registry } from '@polkadot/types/types';
+import type { AnyJson, Registry } from '@polkadot/types/types';
 
 import { Struct } from '@polkadot/types/codec';
 import { assert } from '@polkadot/util';
 
-import { MagicNumber } from './MagicNumber';
 import { toV10 } from './v9/toV10';
 import { toV11 } from './v10/toV11';
 import { toV12 } from './v11/toV12';
 import { toLatest } from './v12/toLatest';
+import { MagicNumber } from './MagicNumber';
 import { getUniqTypes, toCallsOnly } from './util';
 
 type MetaMapped = MetadataV9 | MetadataV10 | MetadataV11 | MetadataV12;
@@ -33,25 +33,32 @@ export class MetadataVersioned extends Struct {
     }, value as Map<unknown, unknown>);
   }
 
-  private _assertVersion (version: number): boolean {
+  #assertVersion = (version: number): boolean => {
     assert(this.version <= version, `Cannot convert metadata from v${this.version} to v${version}`);
 
     return this.version === version;
-  }
+  };
 
-  private _getVersion<T extends MetaMapped, F extends MetaMapped> (version: MetaVersions, fromPrev: (registry: Registry, input: F) => T): T {
+  #getVersion = <T extends MetaMapped, F extends MetaMapped>(version: MetaVersions, fromPrev: (registry: Registry, input: F, metaVersion: number) => T): T => {
     const asCurr = `asV${version}` as MetaAsX;
     const asPrev = `asV${version - 1}` as MetaAsX;
 
-    if (this._assertVersion(version)) {
-      return this._metadata[asCurr] as T;
+    if (this.#assertVersion(version)) {
+      return this.#metadata()[asCurr] as T;
     }
 
     if (!this.#converted.has(version)) {
-      this.#converted.set(version, fromPrev(this.registry, this[asPrev] as F));
+      this.#converted.set(version, fromPrev(this.registry, this[asPrev] as F, this.version));
     }
 
     return this.#converted.get(version) as T;
+  };
+
+  /**
+   * @description the metadata wrapped
+   */
+  #metadata = (): MetadataAll => {
+    return this.get('metadata') as MetadataAll;
   }
 
   /**
@@ -65,33 +72,33 @@ export class MetadataVersioned extends Struct {
   }
 
   /**
-   * @description Returns the wrapped metadata as a V1 object
+   * @description Returns the wrapped metadata as a V9 object
    */
   public get asV9 (): MetadataV9 {
-    this._assertVersion(9);
+    this.#assertVersion(9);
 
-    return this._metadata.asV9;
+    return this.#metadata().asV9;
   }
 
   /**
    * @description Returns the wrapped values as a V10 object
    */
   public get asV10 (): MetadataV10 {
-    return this._getVersion(10, toV10);
+    return this.#getVersion(10, toV10);
   }
 
   /**
-   * @description Returns the wrapped values as a V10 object
+   * @description Returns the wrapped values as a V11 object
    */
   public get asV11 (): MetadataV11 {
-    return this._getVersion(11, toV11);
+    return this.#getVersion(11, toV11);
   }
 
   /**
-   * @description Returns the wrapped values as a V10 object
+   * @description Returns the wrapped values as a V12 object
    */
-  public get asV12 (): MetadataV11 {
-    return this._getVersion(12, toV12);
+  public get asV12 (): MetadataV12 {
+    return this.#getVersion(12, toV12);
   }
 
   /**
@@ -99,7 +106,7 @@ export class MetadataVersioned extends Struct {
    */
   public get asLatest (): MetadataLatest {
     // This is non-existent & latest - applied here to do the module-specific type conversions
-    return this._getVersion(13, toLatest);
+    return this.#getVersion(13, toLatest);
   }
 
   /**
@@ -110,20 +117,25 @@ export class MetadataVersioned extends Struct {
   }
 
   /**
-   * @description the metadata wrapped
-   */
-  private get _metadata (): MetadataAll {
-    return this.get('metadata') as MetadataAll;
-  }
-
-  /**
    * @description the metadata version this structure represents
    */
   public get version (): number {
-    return this._metadata.index;
+    return this.#metadata().index;
   }
 
   public getUniqTypes (throwError: boolean): string[] {
     return getUniqTypes(this.registry, this.asLatest, throwError);
+  }
+
+  /**
+   * @description Converts the Object to JSON, typically used for RPC transfers
+   */
+  public toJSON (): Record<string, AnyJson> {
+    // HACK(y): ensure that we apply the aliasses if we have not done so already, this is
+    // needed to ensure we have the overrides as intended (only applied in toLatest)
+    // eslint-disable-next-line no-unused-expressions
+    this.asLatest;
+
+    return super.toJSON();
   }
 }

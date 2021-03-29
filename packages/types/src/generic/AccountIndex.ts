@@ -1,15 +1,14 @@
-// Copyright 2017-2020 @polkadot/types authors & contributors
+// Copyright 2017-2021 @polkadot/types authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import type { AnyNumber, Registry } from '../types';
 
 import BN from 'bn.js';
-import { bnToBn, isBn, isBigInt, isNumber, isU8a, isHex } from '@polkadot/util';
+
+import { bnToBn, isBigInt, isBn, isHex, isNumber, isU8a } from '@polkadot/util';
 import { decodeAddress, encodeAddress } from '@polkadot/util-crypto';
 
 import { u32 } from '../primitive/U32';
-
-export const ENUMSET_SIZE = new BN(64);
 
 const PREFIX_1BYTE = 0xef;
 const PREFIX_2BYTE = 0xfc;
